@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "graph-platform"
+version = "0.1.0"
+description = "Platform core orchestrating graph plugins"
+requires-python = ">=3.11"
+dependencies = [
+    "graph-api"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
