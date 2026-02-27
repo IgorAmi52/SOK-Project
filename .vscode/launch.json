@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug JSON Plugin Tests",
+            "type": "python",
+            "request": "launch",
+            "module": "data_source_plugin_json.tests.test_parser",
+            "env": {
+                "PYTHONPATH": "api"
+            },
+            "justMyCode": false,
+            "console": "integratedTerminal"
+        }
+    ]
+}

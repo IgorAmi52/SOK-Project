@@ -1,0 +1,276 @@
+{
+  "employees": [
+{
+    "id": "E00001",
+    "name": "Theresa Pennington",
+    "profile": {
+        "contact": {
+            "email": "cclay@example.org",
+            "phone": "001-532-976-7673x867",
+            "address": {
+                "street": "59729 Janet Summit Apt. 616",
+                "city": "West Diane",
+                "location": {
+                    "state": "SC",
+                    "country": "USA",
+                    "geo": {
+                        "lat": "-21.6591",
+                        "long": "54.4824",
+                        "timezone": {
+                            "name": "America/New_York",
+                            "utc_offset": "-05:00"
+                        }
+                    }
+                }
+            }
+        },
+        "projects": [
+            {
+                "projectId": "P674",
+                "name": "Empower Holistic Synergies",
+                "tasks": [
+                    {
+                        "taskId": "T322",
+                        "description": "Programmable client-server benchmark",
+                        "assignedTo": {
+                            "id": "E00001",
+                            "name": "Theresa Pennington",
+                            "skills": {
+                                "primary": "C++",
+                                "secondary": [
+                                    "Kubernetes",
+                                    "Docker"
+                                ],
+                                "experience": {
+                                    "years": 7,
+                                    "domains": [
+                                        "E-commerce",
+                                        "Finance"
+                                    ],
+                                    "certifications": {
+                                        "current": [
+                                            "AWS Certified Developer",
+                                            "AWS Solutions Architect"
+                                        ],
+                                        "expired": [
+                                            "CompTIA Security+"
+                                        ],
+                                        "meta": {
+                                            "verified": true,
+                                            "lastUpdated": "2025-01-27"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+},
+{
+    "id": "E00002",
+    "name": "David Martin",
+    "profile": {
+        "contact": {
+            "email": "rtaylor@example.com",
+            "phone": "(701)886-4605x830",
+            "address": {
+                "street": "875 Marissa Lane",
+                "city": "Hubbardmouth",
+                "location": {
+                    "state": "DC",
+                    "country": "USA",
+                    "geo": {
+                        "lat": "-64.4197",
+                        "long": "-170.7210",
+                        "timezone": {
+                            "name": "America/Los_Angeles",
+                            "utc_offset": "-08:00"
+                        }
+                    }
+                }
+            }
+        },
+        "projects": [
+            {
+                "projectId": "P601",
+                "name": "Brand Clicks-And-Mortar Metrics",
+                "tasks": [
+                    {
+                        "taskId": "T671",
+                        "description": "Focused directional initiative",
+                        "assignedTo": {
+                            "id": "E00002",
+                            "name": "David Martin",
+                            "skills": {
+                                "primary": "Go",
+                                "secondary": [
+                                    "React",
+                                    "Node.js"
+                                ],
+                                "experience": {
+                                    "years": 10,
+                                    "domains": [
+                                        "AI",
+                                        "E-commerce"
+                                    ],
+                                    "certifications": {
+                                        "current": [
+                                            "AWS Solutions Architect",
+                                            "Scrum Master"
+                                        ],
+                                        "expired": [
+                                            "CompTIA Security+"
+                                        ],
+                                        "meta": {
+                                            "verified": true,
+                                            "lastUpdated": "2025-07-11"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+},
+{
+    "id": "E00003",
+    "name": "Katherine Rivera",
+    "profile": {
+        "contact": {
+            "email": "manderson@example.net",
+            "phone": "(229)755-8891x576",
+            "address": {
+                "street": "66296 Austin Manors Apt. 477",
+                "city": "South Traceybury",
+                "location": {
+                    "state": "AK",
+                    "country": "USA",
+                    "geo": {
+                        "lat": "-88.6417",
+                        "long": "137.6185",
+                        "timezone": {
+                            "name": "America/Denver",
+                            "utc_offset": "-07:00"
+                        }
+                    }
+                }
+            }
+        },
+        "projects": [
+            {
+                "projectId": "P428",
+                "name": "Evolve Innovative Platforms",
+                "tasks": [
+                    {
+                        "taskId": "T945",
+                        "description": "Reverse-engineered leadingedge hub",
+                        "assignedTo": {
+                            "id": "E00003",
+                            "name": "Katherine Rivera",
+                            "skills": {
+                                "primary": "JavaScript",
+                                "secondary": [
+                                    "AWS",
+                                    "Kubernetes"
+                                ],
+                                "experience": {
+                                    "years": 3,
+                                    "domains": [
+                                        "Cloud",
+                                        "DevOps"
+                                    ],
+                                    "certifications": {
+                                        "current": [
+                                            "Scrum Master",
+                                            "AWS Certified Developer"
+                                        ],
+                                        "expired": [],
+                                        "meta": {
+                                            "verified": true,
+                                            "lastUpdated": "2025-03-01"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+},
+{
+    "id": "E00004",
+    "name": "Erin Garcia",
+    "profile": {
+        "contact": {
+            "email": "michael12@example.net",
+            "phone": "(970)971-9480x026",
+            "address": {
+                "street": "076 Hill Plaza Apt. 119",
+                "city": "Brandonmouth",
+                "location": {
+                    "state": "DC",
+                    "country": "USA",
+                    "geo": {
+                        "lat": "60.2579",
+                        "long": "139.3039",
+                        "timezone": {
+                            "name": "America/New_York",
+                            "utc_offset": "-05:00"
+                        }
+                    }
+                }
+            }
+        },
+        "projects": [
+            {
+                "projectId": "P381",
+                "name": "Productize Revolutionary E-Services",
+                "tasks": [
+                    {
+                        "taskId": "T285",
+                        "description": "Switchable even-keeled hub",
+                        "assignedTo": {
+                            "id": "E00004",
+                            "name": "Erin Garcia",
+                            "skills": {
+                                "primary": "C++",
+                                "secondary": [
+                                    "GCP",
+                                    "Kubernetes"
+                                ],
+                                "experience": {
+                                    "years": 7,
+                                    "domains": [
+                                        "AI",
+                                        "Healthcare"
+                                    ],
+                                    "certifications": {
+                                        "current": [
+                                            "AWS Solutions Architect",
+                                            "AWS Certified Developer"
+                                        ],
+                                        "expired": [],
+                                        "meta": {
+                                            "verified": true,
+                                            "lastUpdated": "2025-01-28"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+}
+  ]
+}
