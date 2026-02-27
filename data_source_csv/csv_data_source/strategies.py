@@ -108,12 +108,103 @@ class EdgeListCsvStrategy(CsvFormatStrategy):
 
 
 class AdjacencyListCsvStrategy(CsvFormatStrategy):
+    _REQUIRED_COLUMNS = ("source", "targets")
+    _TRUTHY = {"1", "true", "yes", "y", "t"}
+    _FALSY = {"0", "false", "no", "n", "f"}
+
     @property
     def format_name(self) -> str:
         return "adjacency_list"
 
     def parse_rows(self, csv_rows: CsvRows) -> ParsedGraphData:
-        raise CsvParsingError("CSV format 'adjacency_list' is not implemented yet.")
+        missing_columns = [
+            column for column in self._REQUIRED_COLUMNS if column not in csv_rows.fieldnames
+        ]
+        if missing_columns:
+            raise CsvParsingError(
+                "Adjacency list CSV is missing required columns: " + ", ".join(missing_columns)
+            )
+
+        parsed = ParsedGraphData()
+        seen_edge_ids: set[str] = set()
+        auto_edge_id = 1
+
+        for row_index, row in enumerate(csv_rows.rows, start=2):
+            source_id = self._get_required_cell(row, "source", row_index)
+            parsed.node_attributes.setdefault(source_id, {})
+            parsed.node_attributes[source_id].update(self._extract_prefixed(row, "source_"))
+
+            directed_raw = row.get("directed", "").strip()
+            directed = True if directed_raw == "" else self._parse_bool(directed_raw, row_index)
+
+            targets = self._parse_targets(row.get("targets", ""), row_index=row_index)
+            provided_edge_id = row.get("edge_id", "").strip()
+            if provided_edge_id != "" and len(targets) > 1:
+                raise CsvParsingError(
+                    f"Row {row_index} cannot provide one edge_id for multiple targets."
+                )
+
+            edge_attributes = self._extract_prefixed(row, "edge_")
+
+            for target_id in targets:
+                parsed.node_attributes.setdefault(target_id, {})
+
+                edge_id = provided_edge_id
+                if edge_id == "":
+                    edge_id = f"e{auto_edge_id}"
+                    auto_edge_id += 1
+
+                if edge_id in seen_edge_ids:
+                    raise CsvParsingError(f"Duplicate edge_id '{edge_id}' at row {row_index}.")
+                seen_edge_ids.add(edge_id)
+
+                parsed.edges.append(
+                    ParsedEdge(
+                        edge_id=edge_id,
+                        source_id=source_id,
+                        target_id=target_id,
+                        directed=directed,
+                        attributes=dict(edge_attributes),
+                    )
+                )
+
+        return parsed
+
+    def _get_required_cell(self, row: dict[str, str], key: str, row_index: int) -> str:
+        value = row.get(key, "").strip()
+        if value == "":
+            raise CsvParsingError(f"Row {row_index} has empty required '{key}' value.")
+        return value
+
+    def _extract_prefixed(self, row: dict[str, str], prefix: str) -> dict[str, AttributeValue]:
+        attributes: dict[str, AttributeValue] = {}
+        for key, value in row.items():
+            if not key.startswith(prefix):
+                continue
+            attr_name = key[len(prefix) :].strip()
+            if attr_name == "":
+                continue
+            if value.strip() == "":
+                continue
+            attributes[attr_name] = infer_attribute_value(value)
+        return attributes
+
+    def _parse_bool(self, value: str, row_index: int) -> bool:
+        lowered = value.strip().lower()
+        if lowered in self._TRUTHY:
+            return True
+        if lowered in self._FALSY:
+            return False
+        raise CsvParsingError(
+            f"Row {row_index} contains invalid directed flag '{value}'. "
+            "Use true/false, yes/no, 1/0."
+        )
+
+    def _parse_targets(self, raw_targets: str, row_index: int) -> list[str]:
+        targets = [target.strip() for target in raw_targets.split("|") if target.strip() != ""]
+        if not targets:
+            raise CsvParsingError(f"Row {row_index} has no targets in adjacency list.")
+        return targets
 
 
 class MatrixCsvStrategy(CsvFormatStrategy):
