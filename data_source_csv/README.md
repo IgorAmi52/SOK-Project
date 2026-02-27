@@ -9,9 +9,9 @@ It uses:
 
 Currently implemented strategy:
 - `edge_list`
+- `adjacency_list`
 
 Extension points (planned in follow-up issues):
-- `adjacency_list`
 - `matrix`
 
 ## Install
@@ -52,6 +52,32 @@ Example:
 source,target,edge_id,directed,source_age,target_age,edge_weight,source_joined
 n1,n2,e1,true,21,22,0.5,2024-01-10
 n2,n3,e2,false,22,23,1.25,2024-02-11
+```
+
+## Adjacency List CSV Format
+
+Required columns:
+- `source`
+- `targets`
+
+Optional columns:
+- `directed` (`true/false`, `yes/no`, `1/0`)
+- `edge_id` (allowed only when a row has a single target)
+- `source_<attr_name>` for source-node attributes
+- `edge_<attr_name>` for generated edge attributes
+
+Notes:
+- `targets` must contain one or more target ids separated by `|`.
+- Each source-target pair becomes one edge.
+- Type inference is applied the same way as in edge-list format.
+
+Example:
+
+```csv
+source,targets,directed,source_role,source_joined,edge_weight
+n1,n2|n3,true,admin,2024-01-10,0.5
+n3,n4,true,member,2024-01-15,1.25
+n4,n1,false,guest,2024-01-18,2.0
 ```
 
 ## Usage Example

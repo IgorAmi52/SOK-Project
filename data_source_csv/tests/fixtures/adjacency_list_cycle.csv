@@ -1,0 +1,3 @@
+source,targets,directed
+n1,n2,true
+n2,n1,true

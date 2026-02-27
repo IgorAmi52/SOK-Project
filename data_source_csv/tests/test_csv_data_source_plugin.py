@@ -78,10 +78,10 @@ class CsvDataSourcePluginTests(unittest.TestCase):
     def setUp(self) -> None:
         self.plugin = CsvDataSourcePlugin()
 
-    def _params(self, fixture_name: str, **overrides: str) -> dict[str, str]:
+    def _params(self, fixture_name: str, csv_format: str = "edge_list", **overrides: str) -> dict[str, str]:
         params = {
             "file_path": str(FIXTURES_DIR / fixture_name),
-            "format": "edge_list",
+            "format": csv_format,
         }
         params.update(overrides)
         return params
@@ -123,6 +123,54 @@ class CsvDataSourcePluginTests(unittest.TestCase):
     def test_invalid_directed_value_raises_error(self) -> None:
         with self.assertRaises(CsvParsingError):
             self.plugin.load_graph(self._params("edge_list_invalid_directed.csv"))
+
+    def test_adjacency_list_happy_path_builds_graph(self) -> None:
+        graph = self.plugin.load_graph(
+            self._params("adjacency_list_valid.csv", csv_format="adjacency_list")
+        )
+
+        self.assertEqual(graph.graph_id, "adjacency_list_valid")
+        self.assertEqual(set(graph.nodes.keys()), {"n1", "n2", "n3", "n4"})
+        self.assertEqual(len(graph.edges), 4)
+        self.assertTrue(graph.edges["e1"].directed)
+        self.assertFalse(graph.edges["e4"].directed)
+        self.assertEqual(graph.nodes["n1"].attributes["role"], "admin")
+        self.assertEqual(graph.edges["e1"].attributes["weight"], 0.5)
+        self.assertIsInstance(graph.nodes["n1"].attributes["joined"], date)
+
+    def test_adjacency_list_cycle_input_is_supported(self) -> None:
+        graph = self.plugin.load_graph(
+            self._params("adjacency_list_cycle.csv", csv_format="adjacency_list")
+        )
+        pairs = {(edge.source_id, edge.target_id) for edge in graph.edges.values()}
+        self.assertEqual(pairs, {("n1", "n2"), ("n2", "n1")})
+
+    def test_adjacency_list_missing_required_columns_raises_error(self) -> None:
+        with self.assertRaises(CsvParsingError):
+            self.plugin.load_graph(
+                self._params(
+                    "adjacency_list_missing_columns.csv",
+                    csv_format="adjacency_list",
+                )
+            )
+
+    def test_adjacency_list_invalid_directed_value_raises_error(self) -> None:
+        with self.assertRaises(CsvParsingError):
+            self.plugin.load_graph(
+                self._params(
+                    "adjacency_list_invalid_directed.csv",
+                    csv_format="adjacency_list",
+                )
+            )
+
+    def test_adjacency_list_single_edge_id_with_multiple_targets_raises_error(self) -> None:
+        with self.assertRaises(CsvParsingError):
+            self.plugin.load_graph(
+                self._params(
+                    "adjacency_list_invalid_edge_id.csv",
+                    csv_format="adjacency_list",
+                )
+            )
 
     def test_plugin_works_with_platform_registry(self) -> None:
         registry = PluginRegistry()
