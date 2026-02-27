@@ -1,4 +1,9 @@
 .venv/
+.venv*/
 venv/
 __pycache__/
 *.pyc
+.idea/
+**/build/
+**/*.egg-info/
+.vscode/
