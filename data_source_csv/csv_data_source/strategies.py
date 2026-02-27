@@ -208,9 +208,78 @@ class AdjacencyListCsvStrategy(CsvFormatStrategy):
 
 
 class MatrixCsvStrategy(CsvFormatStrategy):
+    _REQUIRED_ROW_COLUMN = "source"
+    _NO_EDGE_LITERALS = {"false", "no", "n", "f"}
+    _TRUTHY_EDGE_LITERALS = {"1", "true", "yes", "y", "t"}
+
     @property
     def format_name(self) -> str:
         return "matrix"
 
     def parse_rows(self, csv_rows: CsvRows) -> ParsedGraphData:
-        raise CsvParsingError("CSV format 'matrix' is not implemented yet.")
+        if self._REQUIRED_ROW_COLUMN not in csv_rows.fieldnames:
+            raise CsvParsingError("Matrix CSV is missing required column: source")
+
+        target_columns = [name for name in csv_rows.fieldnames if name != self._REQUIRED_ROW_COLUMN]
+        if not target_columns:
+            raise CsvParsingError("Matrix CSV must define at least one target node column.")
+
+        parsed = ParsedGraphData()
+        seen_sources: set[str] = set()
+        auto_edge_id = 1
+
+        for row_index, row in enumerate(csv_rows.rows, start=2):
+            source_id = self._get_required_cell(row, self._REQUIRED_ROW_COLUMN, row_index)
+            if source_id in seen_sources:
+                raise CsvParsingError(f"Duplicate matrix source node '{source_id}' at row {row_index}.")
+            seen_sources.add(source_id)
+            parsed.node_attributes.setdefault(source_id, {})
+
+            for target_id in target_columns:
+                parsed.node_attributes.setdefault(target_id, {})
+                cell_value = row.get(target_id, "").strip()
+                if self._is_no_edge_cell(cell_value):
+                    continue
+
+                attributes: dict[str, AttributeValue] = {}
+                if not self._is_truthy_edge_cell(cell_value):
+                    attributes["value"] = infer_attribute_value(cell_value)
+
+                parsed.edges.append(
+                    ParsedEdge(
+                        edge_id=f"e{auto_edge_id}",
+                        source_id=source_id,
+                        target_id=target_id,
+                        directed=True,
+                        attributes=attributes,
+                    )
+                )
+                auto_edge_id += 1
+
+        return parsed
+
+    def _get_required_cell(self, row: dict[str, str], key: str, row_index: int) -> str:
+        value = row.get(key, "").strip()
+        if value == "":
+            raise CsvParsingError(f"Row {row_index} has empty required '{key}' value.")
+        return value
+
+    def _is_no_edge_cell(self, raw_value: str) -> bool:
+        value = raw_value.strip()
+        if value == "":
+            return True
+
+        lowered = value.lower()
+        if lowered in self._NO_EDGE_LITERALS:
+            return True
+
+        inferred = infer_attribute_value(value)
+        if isinstance(inferred, bool):
+            return not inferred
+        if isinstance(inferred, (int, float)) and inferred == 0:
+            return True
+        return False
+
+    def _is_truthy_edge_cell(self, raw_value: str) -> bool:
+        lowered = raw_value.strip().lower()
+        return lowered in self._TRUTHY_EDGE_LITERALS

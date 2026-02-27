@@ -172,6 +172,47 @@ class CsvDataSourcePluginTests(unittest.TestCase):
                 )
             )
 
+    def test_matrix_happy_path_builds_graph(self) -> None:
+        graph = self.plugin.load_graph(self._params("matrix_valid.csv", csv_format="matrix"))
+
+        self.assertEqual(graph.graph_id, "matrix_valid")
+        self.assertEqual(set(graph.nodes.keys()), {"n1", "n2", "n3", "n4"})
+        self.assertEqual(len(graph.edges), 4)
+
+        edge_by_pair = {(edge.source_id, edge.target_id): edge for edge in graph.edges.values()}
+        self.assertEqual(set(edge_by_pair.keys()), {("n1", "n2"), ("n2", "n3"), ("n3", "n1"), ("n3", "n4")})
+        self.assertTrue(all(edge.directed for edge in edge_by_pair.values()))
+        self.assertEqual(edge_by_pair[("n1", "n2")].attributes, {})
+        self.assertEqual(edge_by_pair[("n2", "n3")].attributes["value"], 2.5)
+        self.assertEqual(edge_by_pair[("n3", "n4")].attributes["value"], "connected")
+
+    def test_matrix_missing_source_column_raises_error(self) -> None:
+        with self.assertRaises(CsvParsingError):
+            self.plugin.load_graph(
+                self._params(
+                    "matrix_missing_source_column.csv",
+                    csv_format="matrix",
+                )
+            )
+
+    def test_matrix_missing_target_columns_raises_error(self) -> None:
+        with self.assertRaises(CsvParsingError):
+            self.plugin.load_graph(
+                self._params(
+                    "matrix_missing_target_columns.csv",
+                    csv_format="matrix",
+                )
+            )
+
+    def test_matrix_duplicate_source_row_raises_error(self) -> None:
+        with self.assertRaises(CsvParsingError):
+            self.plugin.load_graph(
+                self._params(
+                    "matrix_duplicate_source.csv",
+                    csv_format="matrix",
+                )
+            )
+
     def test_plugin_works_with_platform_registry(self) -> None:
         registry = PluginRegistry()
         registry.register_data_source(self.plugin)
