@@ -1,9 +1,20 @@
 {
-  "include": ["api", "platform"],
+  "include": [
+    "api",
+    "platform",
+    "data_source_csv",
+    "data_source_plugin_json",
+    "graph_explorer"
+  ],
   "executionEnvironments": [
     {
       "root": ".",
-      "extraPaths": ["api", "platform"]
+      "extraPaths": [
+        "api",
+        "platform",
+        "data_source_csv",
+        "data_source_plugin_json"
+      ]
     }
   ]
 }

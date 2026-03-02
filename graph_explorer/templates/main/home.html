@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Graph Explorer</title>
+</head>
+<body>
+    <h1>Graph Explorer (Django)</h1>
+
+    <p>{{ integration_message }}</p>
+
+    <h2>Data source plugins</h2>
+    <ul>
+        {% for plugin in data_sources %}
+            <li>{{ plugin.name }} ({{ plugin.id }})</li>
+        {% empty %}
+            <li>No data source plugins discovered yet.</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Visualizer plugins</h2>
+    <ul>
+        {% for plugin in visualizers %}
+            <li>{{ plugin.name }} ({{ plugin.id }})</li>
+        {% empty %}
+            <li>No visualizer plugins discovered yet.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

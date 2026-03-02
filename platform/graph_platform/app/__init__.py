@@ -13,8 +13,15 @@ def create_plugin_registry() -> PluginRegistry:
 
     try:
         from data_source_plugin_json import JsonDataSourcePlugin
+        registry.register_data_source(JsonDataSourcePlugin())
     except ImportError:
-        return registry
+        pass
 
-    registry.register_data_source(JsonDataSourcePlugin())
+    try:
+        from csv_data_source.plugin import CsvDataSourcePlugin
+
+        registry.register_data_source(CsvDataSourcePlugin())
+    except ImportError:
+        pass
+
     return registry
