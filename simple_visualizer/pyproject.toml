@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "simple-visualizer"
+version = "0.1.0"
+description = "Simple visualizer plugin for graph visualization platform"
+requires-python = ">=3.11"
+dependencies = [
+    "graph-api",
+    "jinja2>=3.0"
+]
+
+[tool.setuptools]
+packages = ["simple_visualizer"]
+
+[tool.setuptools.package-dir]
+simple_visualizer = "."
+
+[tool.setuptools.package-data]
+simple_visualizer = ["templates/*.html"]

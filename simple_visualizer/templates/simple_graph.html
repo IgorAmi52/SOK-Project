@@ -1,0 +1,154 @@
+<div class="simple-visualizer-container" id="simple-visualizer-{{ graph_id }}">
+    <svg class="simple-visualizer-svg"></svg>
+</div>
+
+<script>
+(function() {
+    const containerId = "simple-visualizer-{{ graph_id }}";
+    const container = document.getElementById(containerId);
+    const svg = d3.select("#" + containerId + " .simple-visualizer-svg");
+
+    const nodes = {{ nodes_json | safe }};
+    const links = {{ edges_json | safe }};
+    const selectedNodeId = {{ selected_node_id_json | safe }};
+    const isDirected = {{ is_directed | tojson }};
+
+    const width = container.clientWidth || 800;
+    const height = container.clientHeight || 600;
+
+    svg.attr("width", width).attr("height", height);
+
+    // Define arrow marker for directed edges
+    svg.append("defs").append("marker")
+        .attr("id", "arrowhead-" + containerId)
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 20)
+        .attr("refY", 0)
+        .attr("markerWidth", 6)
+        .attr("markerHeight", 6)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5")
+        .attr("fill", "#999");
+
+    const g = svg.append("g").attr("class", "graph-content");
+
+    // Zoom behavior
+    const zoom = d3.zoom()
+        .scaleExtent([0.1, 4])
+        .on("zoom", (event) => {
+            g.attr("transform", event.transform);
+            container.dispatchEvent(new CustomEvent("visualizer:zoom", {
+                detail: { transform: event.transform },
+                bubbles: true
+            }));
+        });
+
+    svg.call(zoom);
+
+    const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(100))
+        .force("charge", d3.forceManyBody().strength(-300))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collision", d3.forceCollide().radius(30));
+
+    // Draw edges
+    const link = g.append("g")
+        .attr("class", "links")
+        .selectAll("line")
+        .data(links)
+        .enter()
+        .append("line")
+        .attr("class", "simple-edge")
+        .attr("stroke", "#999")
+        .attr("stroke-width", 1.5)
+        .attr("marker-end", d => d.directed ? "url(#arrowhead-" + containerId + ")" : null);
+
+    // Draw nodes
+    const node = g.append("g")
+        .attr("class", "nodes")
+        .selectAll("g")
+        .data(nodes)
+        .enter()
+        .append("g")
+        .attr("class", d => "simple-node" + (d.id === selectedNodeId ? " selected" : ""))
+        .attr("data-node-id", d => d.id)
+        .call(d3.drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended));
+
+    node.append("circle")
+        .attr("r", 15)
+        .attr("fill", d => d.id === selectedNodeId ? "#ff6b6b" : "#4ecdc4")
+        .attr("stroke", d => d.id === selectedNodeId ? "#c0392b" : "#1a535c")
+        .attr("stroke-width", 2);
+
+    node.append("text")
+        .attr("dy", 4)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "10px")
+        .attr("fill", "#fff")
+        .attr("pointer-events", "none")
+        .text(d => d.label.length > 6 ? d.label.substring(0, 5) + "..." : d.label);
+
+    // Tooltip on mouseover
+    node.on("mouseover", function(event, d) {
+        const tooltip = document.createElement("div");
+        tooltip.className = "simple-visualizer-tooltip";
+        tooltip.innerHTML = "<strong>" + d.label + "</strong><br>ID: " + d.id;
+        tooltip.style.cssText = "position:absolute;background:#333;color:#fff;padding:8px;border-radius:4px;font-size:12px;pointer-events:none;z-index:1000;";
+        tooltip.style.left = (event.pageX + 10) + "px";
+        tooltip.style.top = (event.pageY - 10) + "px";
+        tooltip.id = "tooltip-" + containerId;
+        document.body.appendChild(tooltip);
+
+        container.dispatchEvent(new CustomEvent("visualizer:hover", {
+            detail: { nodeId: d.id, node: d },
+            bubbles: true
+        }));
+    })
+    .on("mouseout", function() {
+        const tooltip = document.getElementById("tooltip-" + containerId);
+        if (tooltip) tooltip.remove();
+    })
+    .on("click", function(event, d) {
+        container.dispatchEvent(new CustomEvent("visualizer:select", {
+            detail: { nodeId: d.id, node: d },
+            bubbles: true
+        }));
+    });
+
+    simulation.on("tick", () => {
+        link
+            .attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y);
+
+        node.attr("transform", d => "translate(" + d.x + "," + d.y + ")");
+    });
+
+    function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+    }
+
+    function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+
+    // Expose zoom controls
+    container.zoomIn = () => svg.transition().call(zoom.scaleBy, 1.3);
+    container.zoomOut = () => svg.transition().call(zoom.scaleBy, 0.7);
+    container.resetZoom = () => svg.transition().call(zoom.transform, d3.zoomIdentity);
+})();
+</script>
