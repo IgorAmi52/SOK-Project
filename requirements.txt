@@ -1,1 +1,1 @@
-# Add dependencies incrementally as features are implemented.
+Django>=5.0,<6.0

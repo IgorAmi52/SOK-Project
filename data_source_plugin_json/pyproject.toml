@@ -11,5 +11,8 @@ dependencies = [
     "graph-api"
 ]
 
-[tool.setuptools.packages.find]
-where = ["."]
+[tool.setuptools]
+packages = ["data_source_plugin_json"]
+
+[tool.setuptools.package-dir]
+data_source_plugin_json = "."
