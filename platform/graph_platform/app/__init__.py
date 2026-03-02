@@ -24,4 +24,10 @@ def create_plugin_registry() -> PluginRegistry:
     except ImportError:
         pass
 
+    try:
+        from simple_visualizer import SimpleVisualizerPlugin
+        registry.register_visualizer(SimpleVisualizerPlugin())
+    except ImportError:
+        pass
+
     return registry

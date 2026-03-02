@@ -1,0 +1,92 @@
+{
+  "id": "id1",
+  "first": "Abraham",
+  "last": "Doe",
+  "years": 88,
+  "children": [
+    {
+      "id": "id2",
+      "first": "John",
+      "last": "Doe",
+      "years": 62,
+      "children": [
+        {
+          "id": "id3",
+          "first": "Michael",
+          "last": "Doe",
+          "years": 38,
+          "children": [
+            { "id": "id4", "first": "Kevin", "last": "Doe", "years": 12, "children": [] },
+            { "id": "id5", "first": "Sarah", "last": "Doe", "years": 10, "children": [] },
+            { "id": "id6", "first": "James", "last": "Doe", "years": 7, "children": [] }
+          ]
+        },
+        {
+          "id": "id7",
+          "first": "Emily",
+          "last": "Smith",
+          "years": 35,
+          "children": [
+            { "id": "id8", "first": "Lily", "last": "Smith", "years": 5, "children": [] },
+            { "id": "id9", "first": "Owen", "last": "Smith", "years": 3, "children": [] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "id10",
+      "first": "Robert",
+      "last": "Doe",
+      "years": 59,
+      "children": [
+        {
+          "id": "id11",
+          "first": "Alice",
+          "last": "Brown",
+          "years": 33,
+          "children": [
+            { "id": "id12", "first": "Jack", "last": "Brown", "years": 8, "children": [] },
+            { "id": "id13", "first": "Maya", "last": "Brown", "years": 6, "children": [] },
+            { "id": "id14", "first": "Leo", "last": "Brown", "years": 4, "children": [] }
+          ]
+        },
+        {
+          "id": "id15",
+          "first": "David",
+          "last": "Doe",
+          "years": 30,
+          "children": [
+            { "id": "id16", "first": "Zoe", "last": "Doe", "years": 2, "children": [] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "id17",
+      "first": "Elizabeth",
+      "last": "Garcia",
+      "years": 57,
+      "children": [
+        {
+          "id": "id18",
+          "first": "Chris",
+          "last": "Garcia",
+          "years": 34,
+          "children": [
+            { "id": "id19", "first": "Noah", "last": "Garcia", "years": 11, "children": [] },
+            { "id": "id20", "first": "Mia", "last": "Garcia", "years": 9, "children": [] }
+          ]
+        },
+        {
+          "id": "id21",
+          "first": "Sophia",
+          "last": "Garcia",
+          "years": 31,
+          "children": [
+            { "id": "id22", "first": "Lucas", "last": "Garcia", "years": 4, "children": [] }
+          ]
+        }
+      ]
+    }
+  ]
+}
