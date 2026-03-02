@@ -10,8 +10,6 @@ It uses:
 Currently implemented strategy:
 - `edge_list`
 - `adjacency_list`
-
-Extension points (planned in follow-up issues):
 - `matrix`
 
 ## Install
@@ -78,6 +76,31 @@ source,targets,directed,source_role,source_joined,edge_weight
 n1,n2|n3,true,admin,2024-01-10,0.5
 n3,n4,true,member,2024-01-15,1.25
 n4,n1,false,guest,2024-01-18,2.0
+```
+
+## Matrix CSV Format
+
+Required columns:
+- `source` (row node id)
+- one or more target-node columns (each column name is a target node id)
+
+Cell semantics:
+- empty, `0`, `0.0`, `false`, `no` => no edge
+- `1`, `true`, `yes` => edge exists without additional attributes
+- any other non-empty value => edge exists and value is stored as edge attribute `value`
+
+Notes:
+- Each non-empty matrix cell creates a directed edge from `source` row node to target column node.
+- Source rows must be unique.
+- Type inference is applied to `value` (int, float, date, or str).
+
+Example:
+
+```csv
+source,n1,n2,n3
+n1,0,1,0
+n2,0,0,2.5
+n3,yes,0,0
 ```
 
 ## Usage Example
