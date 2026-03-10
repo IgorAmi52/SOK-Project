@@ -60,6 +60,17 @@
             border-radius: 4px;
             font-size: 0.9rem;
         }
+        .load-form input[type="file"] {
+            max-width: 220px;
+            background: white;
+        }
+        .load-form select {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            background: white;
+        }
         .load-form button {
             padding: 6px 16px;
             background: #4ecdc4;
@@ -93,9 +104,16 @@
                     <span class="plugin-name">{{ plugin.name }}</span>
                     <span class="plugin-id">{{ plugin.id }}</span>
                 </div>
-                <form class="load-form" action="{% url 'workspace' %}" method="get">
+                <form class="load-form" action="{% url 'workspace' %}" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
                     <input type="hidden" name="data_source" value="{{ plugin.id }}">
-                    <input type="text" name="file_path" placeholder="Path to file..." required>
+                    <input type="file" name="source_file" title="Choose file from your computer">
+                    <input type="text" name="file_path" placeholder="Or enter server path...">
+                    <select name="format" title="CSV format (used by CSV plugin)">
+                        <option value="edge_list">edge_list</option>
+                        <option value="adjacency_list">adjacency_list</option>
+                        <option value="matrix">matrix</option>
+                    </select>
                     <button type="submit">Load</button>
                 </form>
             </li>

@@ -213,6 +213,30 @@ class CsvDataSourcePluginTests(unittest.TestCase):
                 )
             )
 
+    def test_large_acyclic_fixture_has_at_least_200_nodes(self) -> None:
+        graph = self.plugin.load_graph(self._params("edge_list_large_acyclic.csv"))
+
+        self.assertGreaterEqual(len(graph.nodes), 200)
+        self.assertEqual(len(graph.nodes), 220)
+        self.assertEqual(len(graph.edges), 219)
+
+        pairs = {(edge.source_id, edge.target_id) for edge in graph.edges.values()}
+        self.assertIn(("n1", "n2"), pairs)
+        self.assertIn(("n219", "n220"), pairs)
+        self.assertNotIn(("n220", "n1"), pairs)
+
+    def test_large_cyclic_fixture_has_at_least_200_nodes_and_cycle(self) -> None:
+        graph = self.plugin.load_graph(self._params("edge_list_large_cyclic.csv"))
+
+        self.assertGreaterEqual(len(graph.nodes), 200)
+        self.assertEqual(len(graph.nodes), 220)
+        self.assertEqual(len(graph.edges), 220)
+
+        pairs = {(edge.source_id, edge.target_id) for edge in graph.edges.values()}
+        self.assertIn(("n1", "n2"), pairs)
+        self.assertIn(("n219", "n220"), pairs)
+        self.assertIn(("n220", "n1"), pairs)
+
     def test_plugin_works_with_platform_registry(self) -> None:
         registry = PluginRegistry()
         registry.register_data_source(self.plugin)
