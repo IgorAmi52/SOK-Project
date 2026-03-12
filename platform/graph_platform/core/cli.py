@@ -107,7 +107,10 @@ class CliCommandExecutor:
                 edge_id = self._require_option(options, "id")
                 source_id = self._require_option(options, "source")
                 target_id = self._require_option(options, "target")
-                directed = self._parse_bool(options.get("directed", "true"))
+                directed_raw = str(options.get("directed", "")).strip()
+                if not directed_raw:
+                    directed_raw = "true"
+                directed = self._parse_bool(directed_raw)
                 edge = Edge(
                     edge_id=edge_id,
                     source_id=source_id,
