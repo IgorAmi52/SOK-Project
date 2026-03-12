@@ -12,10 +12,11 @@
     const links = {{ edges_json | safe }};
     let currentSelectedNodeId = {{ selected_node_id_json | safe }};
     let pendingFocusNodeId = null;
+    let hasAutoFitRun = false;
 
-    const width = container.clientWidth || 900;
-    const height = container.clientHeight || 650;
-    svg.attr("width", width).attr("height", height);
+    let width = 900;
+    let height = 650;
+    applyViewportSize();
 
     svg.append("defs").append("marker")
         .attr("id", "arrowhead-" + containerId)
@@ -42,6 +43,8 @@
         });
 
     svg.call(zoom);
+
+    initializeNodeCoordinates();
 
     const simulation = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d => d.id).distance(170))
@@ -148,6 +151,13 @@
             focusNode(nodeId);
         }
     });
+    simulation.on("end", () => {
+        if (hasAutoFitRun || nodes.length === 0) {
+            return;
+        }
+        hasAutoFitRun = true;
+        fitGraphInView();
+    });
 
     function applySelection(nodeId) {
         currentSelectedNodeId = nodeId || null;
@@ -198,9 +208,70 @@
         d.fy = null;
     }
 
+    function applyViewportSize() {
+        const rect = container.getBoundingClientRect();
+        const parentRect = container.parentElement
+            ? container.parentElement.getBoundingClientRect()
+            : { width: 0, height: 0 };
+        width = Math.max(
+            320,
+            Math.floor(rect.width || container.clientWidth || parentRect.width || 900)
+        );
+        height = Math.max(
+            280,
+            Math.floor(rect.height || container.clientHeight || parentRect.height || 650)
+        );
+        svg.attr("width", width).attr("height", height);
+    }
+
+    function initializeNodeCoordinates() {
+        const spread = 90;
+        nodes.forEach((nodeDatum, index) => {
+            if (typeof nodeDatum.x !== "number") {
+                nodeDatum.x = (width / 2) + ((index % 5) - 2) * spread;
+            }
+            if (typeof nodeDatum.y !== "number") {
+                nodeDatum.y = (height / 2) + (Math.floor(index / 5) - 2) * spread;
+            }
+        });
+    }
+
+    function fitGraphInView() {
+        if (!nodes.length) {
+            return;
+        }
+
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        for (const nodeDatum of nodes) {
+            const halfW = (nodeDatum.width || 180) / 2;
+            const halfH = (nodeDatum.height || 80) / 2;
+            minX = Math.min(minX, nodeDatum.x - halfW);
+            minY = Math.min(minY, nodeDatum.y - halfH);
+            maxX = Math.max(maxX, nodeDatum.x + halfW);
+            maxY = Math.max(maxY, nodeDatum.y + halfH);
+        }
+
+        const graphWidth = Math.max(1, maxX - minX);
+        const graphHeight = Math.max(1, maxY - minY);
+        const margin = 24;
+        const scaleX = (width - margin * 2) / graphWidth;
+        const scaleY = (height - margin * 2) / graphHeight;
+        const scale = Math.max(0.2, Math.min(2.5, Math.min(scaleX, scaleY)));
+        const tx = (width / 2) - (scale * (minX + graphWidth / 2));
+        const ty = (height / 2) - (scale * (minY + graphHeight / 2));
+
+        svg.transition().duration(350).call(
+            zoom.transform,
+            d3.zoomIdentity.translate(tx, ty).scale(scale)
+        );
+    }
+
     container.zoomIn = () => svg.transition().call(zoom.scaleBy, 1.25);
     container.zoomOut = () => svg.transition().call(zoom.scaleBy, 0.8);
-    container.resetZoom = () => svg.transition().call(zoom.transform, d3.zoomIdentity);
+    container.resetZoom = () => fitGraphInView();
     container.selectNode = (nodeId) => applySelection(nodeId);
     container.focusNode = (nodeId) => focusNode(nodeId);
     container.addEventListener("workspace:select-node", function(event) {
@@ -209,6 +280,33 @@
         }
         focusNode(event.detail.nodeId);
     });
+
+    let resizeTimer = null;
+    function onResize() {
+        if (resizeTimer) {
+            clearTimeout(resizeTimer);
+        }
+        resizeTimer = setTimeout(() => {
+            applyViewportSize();
+            simulation.force("center", d3.forceCenter(width / 2, height / 2));
+            simulation.alpha(0.12).restart();
+            fitGraphInView();
+        }, 120);
+    }
+    window.addEventListener("resize", onResize);
+
+    requestAnimationFrame(() => {
+        applyViewportSize();
+        simulation.force("center", d3.forceCenter(width / 2, height / 2));
+        simulation.alpha(0.2).restart();
+        setTimeout(() => {
+            if (!hasAutoFitRun) {
+                hasAutoFitRun = true;
+                fitGraphInView();
+            }
+        }, 450);
+    });
+
     applySelection(currentSelectedNodeId);
 })();
 </script>
