@@ -246,7 +246,7 @@
                         </div>
                         <a class="open-workspace-btn" href="{{ url_for('workspace') }}?workspace_id={{ workspace.id }}">Open</a>
                     </li>
-                {% empty %}
+                {% else %}
                     <li class="empty-message">No workspaces created yet. Load a graph from Data Source Plugins.</li>
                 {% endfor %}
             </ul>
@@ -279,7 +279,7 @@
                             <button type="submit">Load</button>
                         </form>
                     </li>
-                {% empty %}
+                {% else %}
                     <li class="empty-message">No data source plugins discovered yet.</li>
                 {% endfor %}
             </ul>
@@ -297,7 +297,7 @@
                             <span class="plugin-id">{{ plugin.id }}</span>
                         </div>
                     </li>
-                {% empty %}
+                {% else %}
                     <li class="empty-message">No visualizer plugins discovered yet.</li>
                 {% endfor %}
             </ul>
