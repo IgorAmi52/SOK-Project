@@ -11,6 +11,8 @@
     const nodes = {{ nodes_json | safe }};
     const links = {{ edges_json | safe }};
     const selectedNodeId = {{ selected_node_id_json | safe }};
+    let currentSelectedNodeId = selectedNodeId;
+    let pendingFocusNodeId = null;
     const isDirected = {{ is_directed | tojson }};
 
     const width = container.clientWidth || 800;
@@ -71,7 +73,7 @@
         .data(nodes)
         .enter()
         .append("g")
-        .attr("class", d => "simple-node" + (d.id === selectedNodeId ? " selected" : ""))
+        .attr("class", "simple-node")
         .attr("data-node-id", d => d.id)
         .call(d3.drag()
             .on("start", dragstarted)
@@ -80,8 +82,8 @@
 
     node.append("circle")
         .attr("r", 15)
-        .attr("fill", d => d.id === selectedNodeId ? "#ff6b6b" : "#4ecdc4")
-        .attr("stroke", d => d.id === selectedNodeId ? "#c0392b" : "#1a535c")
+        .attr("fill", "#4ecdc4")
+        .attr("stroke", "#1a535c")
         .attr("stroke-width", 2);
 
     node.append("text")
@@ -113,6 +115,7 @@
         if (tooltip) tooltip.remove();
     })
     .on("click", function(event, d) {
+        applySelection(d.id);
         container.dispatchEvent(new CustomEvent("visualizer:select", {
             detail: { nodeId: d.id, node: d },
             bubbles: true
@@ -127,6 +130,12 @@
             .attr("y2", d => d.target.y);
 
         node.attr("transform", d => "translate(" + d.x + "," + d.y + ")");
+
+        if (pendingFocusNodeId) {
+            const nodeId = pendingFocusNodeId;
+            pendingFocusNodeId = null;
+            focusNode(nodeId);
+        }
     });
 
     function dragstarted(event, d) {
@@ -146,9 +155,50 @@
         d.fy = null;
     }
 
+    function applySelection(nodeId) {
+        currentSelectedNodeId = nodeId || null;
+        node.attr("class", d => "simple-node" + (d.id === currentSelectedNodeId ? " selected" : ""));
+        node.select("circle")
+            .attr("fill", d => d.id === currentSelectedNodeId ? "#ff6b6b" : "#4ecdc4")
+            .attr("stroke", d => d.id === currentSelectedNodeId ? "#c0392b" : "#1a535c");
+    }
+
+    function focusNode(nodeId, zoomScale = 1.8) {
+        applySelection(nodeId);
+
+        if (!nodeId) {
+            return;
+        }
+
+        const targetNode = nodes.find(d => d.id === nodeId);
+        if (!targetNode) {
+            return;
+        }
+
+        if (typeof targetNode.x !== "number" || typeof targetNode.y !== "number") {
+            pendingFocusNodeId = nodeId;
+            return;
+        }
+
+        const targetTransform = d3.zoomIdentity
+            .translate((width / 2) - (zoomScale * targetNode.x), (height / 2) - (zoomScale * targetNode.y))
+            .scale(zoomScale);
+
+        svg.transition().duration(400).call(zoom.transform, targetTransform);
+    }
+
     // Expose zoom controls
     container.zoomIn = () => svg.transition().call(zoom.scaleBy, 1.3);
     container.zoomOut = () => svg.transition().call(zoom.scaleBy, 0.7);
     container.resetZoom = () => svg.transition().call(zoom.transform, d3.zoomIdentity);
+    container.selectNode = (nodeId) => applySelection(nodeId);
+    container.focusNode = (nodeId) => focusNode(nodeId);
+    container.addEventListener("workspace:select-node", function(event) {
+        if (!event.detail || !event.detail.nodeId) {
+            return;
+        }
+        focusNode(event.detail.nodeId);
+    });
+    applySelection(currentSelectedNodeId);
 })();
 </script>

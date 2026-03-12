@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+from datetime import date
+from pathlib import Path
+from tempfile import gettempdir
 from typing import TYPE_CHECKING
+from urllib.parse import urlencode
+from uuid import uuid4
 
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+from django.urls import reverse
 
 if TYPE_CHECKING:
     from graph_platform.core.plugin_registry import PluginRegistry
@@ -51,6 +57,7 @@ def workspace(request: HttpRequest) -> HttpResponse:
     registry = _get_registry()
     error_message = None
     graph_html = None
+    tree_graph = None
     node_count = 0
     edge_count = 0
     visualizers: list[dict[str, str]] = []
@@ -68,7 +75,37 @@ def workspace(request: HttpRequest) -> HttpResponse:
             "error_message": error_message,
             "visualizers": [],
             "current_visualizer": current_visualizer,
+            "tree_graph": tree_graph,
         })
+
+    if request.method == "POST":
+        data_source_id = request.POST.get("data_source", "").strip()
+        file_path = request.POST.get("file_path", "").strip()
+        uploaded_source = request.FILES.get("source_file")
+        if uploaded_source:
+            file_path = _persist_uploaded_source_file(uploaded_source)
+
+        if data_source_id and file_path:
+            query_params: dict[str, str] = {
+                "data_source": data_source_id,
+                "file_path": file_path,
+            }
+
+            try:
+                data_source = registry.get_data_source(data_source_id)
+                for parameter in data_source.parameters:
+                    if parameter.name == "file_path":
+                        continue
+                    value = request.POST.get(parameter.name, "").strip()
+                    if value:
+                        query_params[parameter.name] = value
+            except KeyError:
+                pass
+
+            workspace_url = reverse("workspace")
+            return redirect(f"{workspace_url}?{urlencode(query_params)}")
+
+        error_message = "Choose a file or enter a valid file path."
 
     visualizers = [
         {"id": plugin.plugin_id, "name": plugin.display_name}
@@ -79,7 +116,12 @@ def workspace(request: HttpRequest) -> HttpResponse:
         try:
             # Load graph from data source
             data_source = registry.get_data_source(data_source_id)
-            graph = data_source.load_graph({"file_path": file_path})
+            load_params: dict[str, str] = {}
+            for parameter in data_source.parameters:
+                value = request.GET.get(parameter.name, "").strip()
+                if value:
+                    load_params[parameter.name] = value
+            graph = data_source.load_graph(load_params)
 
             # Apply search if provided
             if search_query:
@@ -98,6 +140,7 @@ def workspace(request: HttpRequest) -> HttpResponse:
             visualizer = registry.get_visualizer(current_visualizer)
             selected_node = request.GET.get("selected_node")
             graph_html = visualizer.render(graph, selected_node)
+            tree_graph = _build_tree_graph_payload(graph)
 
         except KeyError as ex:
             error_message = f"Plugin not found: {ex}"
@@ -116,6 +159,7 @@ def workspace(request: HttpRequest) -> HttpResponse:
             "current_visualizer": current_visualizer,
             "search_query": search_query,
             "filter_query": filter_query,
+            "tree_graph": tree_graph,
         },
     )
 
@@ -195,3 +239,56 @@ def _apply_filter(graph, filter_query: str) -> tuple:
             continue
 
     return graph.create_subgraph(matching_node_ids, f"{graph.graph_id}_filter"), None
+
+
+def _serialize_attribute_value(value: int | str | float | date) -> str | int | float:
+    if isinstance(value, date):
+        return value.isoformat()
+    return value
+
+
+def _build_tree_graph_payload(graph) -> dict[str, object]:
+    nodes = []
+    for node_id, node in graph.nodes.items():
+        attributes = {
+            attr_name: _serialize_attribute_value(attr_value)
+            for attr_name, attr_value in node.attributes.items()
+        }
+        nodes.append(
+            {
+                "id": node_id,
+                "attributes": attributes,
+            }
+        )
+
+    edges = []
+    for edge in graph.edges.values():
+        edges.append(
+            {
+                "id": edge.edge_id,
+                "source": edge.source_id,
+                "target": edge.target_id,
+                "directed": edge.directed,
+            }
+        )
+
+    return {
+        "graph_id": graph.graph_id,
+        "nodes": nodes,
+        "edges": edges,
+    }
+
+
+def _persist_uploaded_source_file(uploaded_file) -> str:
+    uploads_dir = Path(gettempdir()) / "sok_project_uploads"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+
+    suffix = Path(uploaded_file.name).suffix[:20]
+    generated_name = f"{uuid4().hex}{suffix}"
+    stored_path = uploads_dir / generated_name
+
+    with stored_path.open("wb") as destination:
+        for chunk in uploaded_file.chunks():
+            destination.write(chunk)
+
+    return str(stored_path)

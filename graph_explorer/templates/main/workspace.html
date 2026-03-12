@@ -1,3 +1,4 @@
+{% load static %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -145,6 +146,150 @@
 
         .btn-secondary:hover {
             background: #1a4a80;
+        }
+
+        .tree-view-section {
+            padding: 16px;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .tree-view-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .tree-view-header h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: #888;
+        }
+
+        .tree-root-select {
+            min-width: 110px;
+            max-width: 150px;
+            padding: 5px 8px;
+            border-radius: 4px;
+            border: 1px solid #0f3460;
+            background: #1a1a2e;
+            color: #eee;
+            font-size: 0.8rem;
+        }
+
+        .tree-view-container {
+            background: #1a1a2e;
+            border: 1px solid #0f3460;
+            border-radius: 4px;
+            min-height: 200px;
+            max-height: 260px;
+            overflow: auto;
+            padding: 8px;
+        }
+
+        .tree-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            color: #d6d6d6;
+            white-space: nowrap;
+        }
+
+        .tree-row:hover {
+            background: #0f346050;
+        }
+
+        .tree-row.selected {
+            background: #0f3460;
+            color: #4ecdc4;
+        }
+
+        .tree-row.cycle {
+            color: #ffb86c;
+        }
+
+        .tree-toggle {
+            width: 16px;
+            height: 16px;
+            border: 1px solid #0f3460;
+            border-radius: 2px;
+            background: #16213e;
+            color: #eee;
+            font-size: 0.72rem;
+            line-height: 1;
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+
+        .tree-toggle.empty {
+            visibility: hidden;
+        }
+
+        .tree-node-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tree-empty {
+            color: #666;
+            font-size: 0.82rem;
+            padding: 6px;
+        }
+
+        .tree-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .tree-controls button {
+            flex: 1;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #0f3460;
+            background: #16213e;
+            color: #eee;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .tree-controls button:hover {
+            background: #0f3460;
+        }
+
+        .tree-jump {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .tree-jump input {
+            flex: 1;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #0f3460;
+            background: #1a1a2e;
+            color: #eee;
+            font-size: 0.78rem;
+        }
+
+        .tree-jump button {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #0f3460;
+            background: #16213e;
+            color: #eee;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .tree-jump button:hover {
+            background: #0f3460;
         }
 
         .node-details {
@@ -343,6 +488,23 @@
                     </div>
                 </div>
 
+                <div class="tree-view-section">
+                    <div class="tree-view-header">
+                        <h3>Tree View</h3>
+                        <select id="tree-root-select" class="tree-root-select" title="Select tree root"></select>
+                    </div>
+                    <div class="tree-controls">
+                        <button id="tree-expand-all" type="button">Expand All</button>
+                        <button id="tree-collapse-all" type="button">Collapse</button>
+                    </div>
+                    <div class="tree-jump">
+                        <input id="tree-jump-input" list="tree-jump-options" type="text" placeholder="Jump to node ID..." />
+                        <datalist id="tree-jump-options"></datalist>
+                        <button id="tree-jump-btn" type="button">Go</button>
+                    </div>
+                    <div id="tree-view" class="tree-view-container"></div>
+                </div>
+
                 <div class="node-details">
                     <h3>Node Details</h3>
                     <div class="node-details-content" id="node-details">
@@ -396,10 +558,30 @@
         </footer>
     </div>
 
+    {{ tree_graph|json_script:"tree-graph-data" }}
+    <script src="{% static 'main/js/tree_view.js' %}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const mainView = document.getElementById('main-view');
             const container = mainView.querySelector('.simple-visualizer-container');
+            const treeGraphElement = document.getElementById('tree-graph-data');
+            let treeGraphData = null;
+            if (treeGraphElement) {
+                treeGraphData = JSON.parse(treeGraphElement.textContent);
+            }
+
+            if (window.TreeView) {
+                window.TreeView.init({
+                    graphData: treeGraphData,
+                    containerId: 'tree-view',
+                    rootSelectId: 'tree-root-select',
+                    expandAllButtonId: 'tree-expand-all',
+                    collapseButtonId: 'tree-collapse-all',
+                    jumpInputId: 'tree-jump-input',
+                    jumpButtonId: 'tree-jump-btn',
+                    jumpOptionsId: 'tree-jump-options',
+                });
+            }
 
             // Zoom controls
             document.getElementById('btn-zoom-in').addEventListener('click', function() {
@@ -466,6 +648,22 @@
             mainView.addEventListener('visualizer:select', function(e) {
                 const nodeData = e.detail.node;
                 updateNodeDetails(nodeData);
+                const nodeId = e.detail.nodeId || (nodeData ? nodeData.id : null);
+                if (window.TreeView && nodeId) {
+                    window.TreeView.setSelectedNode(nodeId);
+                }
+            });
+
+            // Tree -> Main synchronization
+            document.addEventListener('tree:select', function(e) {
+                const nodeData = e.detail.node;
+                const nodeId = e.detail.nodeId;
+                updateNodeDetails(nodeData);
+                if (container && container.focusNode && nodeId) {
+                    container.focusNode(nodeId);
+                } else if (container && container.selectNode && nodeId) {
+                    container.selectNode(nodeId);
+                }
             });
 
             // Zoom event listener for status bar
