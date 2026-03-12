@@ -74,6 +74,29 @@
             border-right: 1px solid #0f3460;
             display: flex;
             flex-direction: column;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-color: #315d8f #111b36;
+            scrollbar-width: thin;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: #111b36;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #2c5b93, #1f4167);
+            border-radius: 10px;
+            border: 2px solid #111b36;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #3b73b6, #295784);
         }
 
         .sidebar-section {
@@ -178,6 +201,16 @@
             border: none;
             cursor: pointer;
             font-size: 0.85rem;
+            min-height: 36px;
+        }
+
+        .action-buttons form {
+            flex: 1;
+            margin: 0;
+        }
+
+        .action-buttons form button {
+            width: 100%;
         }
 
         .btn-primary {
@@ -343,8 +376,6 @@
         }
 
         .node-details {
-            flex: 1;
-            overflow-y: auto;
             padding: 16px;
         }
 
@@ -438,11 +469,13 @@
         }
 
         .right-panel {
-            width: 200px;
+            width: 260px;
             background: #16213e;
             border-left: 1px solid #0f3460;
             display: flex;
             flex-direction: column;
+            flex: 0 0 260px;
+            overflow: hidden;
         }
 
         .bird-view {
@@ -470,6 +503,90 @@
             fill: rgba(78, 205, 196, 0.1);
             stroke: #4ecdc4;
             stroke-width: 1;
+        }
+
+        .cli-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid #0f3460;
+            min-height: 240px;
+            padding: 6px;
+        }
+
+        .cli-header {
+            padding: 8px;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            color: #888;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .cli-output {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.72rem;
+            background: #101828;
+            color: #c7d2fe;
+            white-space: normal;
+            line-height: 1.5;
+            text-align: left;
+            scrollbar-color: #315d8f #111b36;
+            scrollbar-width: thin;
+        }
+
+        .cli-output::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .cli-output::-webkit-scrollbar-track {
+            background: #111b36;
+        }
+
+        .cli-output::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #2c5b93, #1f4167);
+            border-radius: 10px;
+            border: 2px solid #111b36;
+        }
+
+        .cli-output::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #3b73b6, #295784);
+        }
+
+        .cli-line {
+            margin-bottom: 6px;
+            padding-left: 0;
+        }
+
+        .cli-line-output {
+            white-space: pre-wrap;
+        }
+
+        .cli-line .cmd {
+            color: #4ecdc4;
+        }
+
+        .cli-input-wrap {
+            border-top: 1px solid #0f3460;
+            padding: 8px;
+            background: #111a2f;
+        }
+
+        .cli-input {
+            width: 100%;
+            border: 1px solid #0f3460;
+            border-radius: 4px;
+            background: #1a1a2e;
+            color: #eee;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.72rem;
+            padding: 7px;
+        }
+
+        .cli-input:disabled {
+            opacity: 0.6;
         }
 
         .status-bar {
@@ -556,13 +673,13 @@
                     </div>
                     {% if active_workspace_id %}
                         <div class="action-buttons">
-                            <form method="post" style="flex:1;">
+                            <form method="post">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="reset_workspace">
                                 <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
                                 <button class="btn-primary" type="submit">Reset</button>
                             </form>
-                            <form method="post" style="flex:1;">
+                            <form method="post">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="delete_workspace">
                                 <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
@@ -655,10 +772,38 @@
                 </div>
             </main>
 
-            <aside class="right-panel">
+            <aside class="right-panel" id="right-panel">
                 <div class="bird-view">
                     <span class="bird-view-label">Bird View</span>
                     <svg id="bird-view-svg"></svg>
+                </div>
+                <div class="cli-panel">
+                    <div class="cli-header">CLI Terminal</div>
+                    <div class="cli-output" id="cli-output">
+                        {% for entry in cli_entries %}
+                            <div class="cli-line">
+                                <span class="cmd">&gt; {{ entry.command }}</span><br>
+                                <span class="cli-line-output">{{ entry.output }}</span>
+                            </div>
+                        {% empty %}
+                            <div class="cli-line">No commands yet. Type <span class="cmd">help</span>.</div>
+                        {% endfor %}
+                    </div>
+                    <div class="cli-input-wrap">
+                        <form method="post" id="cli-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="execute_cli">
+                            <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
+                            <input
+                                id="cli-input"
+                                name="cli_command"
+                                type="text"
+                                class="cli-input"
+                                autocomplete="off"
+                                {% if not active_workspace_id %}disabled{% endif %}
+                            />
+                        </form>
+                    </div>
                 </div>
             </aside>
         </div>
@@ -671,15 +816,21 @@
     </div>
 
     {{ tree_graph|json_script:"tree-graph-data" }}
+    {{ cli_history|json_script:"cli-history-data" }}
     <script src="{% static 'main/js/tree_view.js' %}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const mainView = document.getElementById('main-view');
             const container = mainView.querySelector('.simple-visualizer-container, .block-visualizer-container');
             const treeGraphElement = document.getElementById('tree-graph-data');
+            const cliHistoryElement = document.getElementById('cli-history-data');
             let treeGraphData = null;
+            let cliHistory = [];
             if (treeGraphElement) {
                 treeGraphData = JSON.parse(treeGraphElement.textContent);
+            }
+            if (cliHistoryElement) {
+                cliHistory = JSON.parse(cliHistoryElement.textContent);
             }
 
             if (window.TreeView) {
@@ -728,6 +879,32 @@
                 visualizerInput.value = e.target.value;
                 visualizerForm.submit();
             });
+
+            const cliOutput = document.getElementById('cli-output');
+            if (cliOutput) {
+                cliOutput.scrollTop = cliOutput.scrollHeight;
+            }
+
+            const cliInput = document.getElementById('cli-input');
+            let cliHistoryIndex = cliHistory.length;
+            if (cliInput) {
+                cliInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'ArrowUp') {
+                        if (cliHistory.length === 0) return;
+                        e.preventDefault();
+                        cliHistoryIndex = Math.max(0, cliHistoryIndex - 1);
+                        cliInput.value = cliHistory[cliHistoryIndex] || '';
+                    } else if (e.key === 'ArrowDown') {
+                        if (cliHistory.length === 0) return;
+                        e.preventDefault();
+                        cliHistoryIndex = Math.min(cliHistory.length, cliHistoryIndex + 1);
+                        cliInput.value = cliHistoryIndex < cliHistory.length ? cliHistory[cliHistoryIndex] : '';
+                    }
+                });
+                cliInput.addEventListener('focus', function() {
+                    cliHistoryIndex = cliHistory.length;
+                });
+            }
 
             // Node selection event listener
             mainView.addEventListener('visualizer:select', function(e) {
