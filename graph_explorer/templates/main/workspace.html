@@ -395,12 +395,14 @@
             overflow: hidden;
         }
 
-        .main-view .simple-visualizer-container {
+        .main-view .simple-visualizer-container,
+        .main-view .block-visualizer-container {
             width: 100%;
             height: 100%;
         }
 
-        .main-view .simple-visualizer-svg {
+        .main-view .simple-visualizer-svg,
+        .main-view .block-visualizer-svg {
             width: 100%;
             height: 100%;
         }
@@ -412,6 +414,7 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
+            z-index: 20;
         }
 
         .zoom-controls button {
@@ -423,6 +426,11 @@
             color: #eee;
             font-size: 1.2rem;
             cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
         }
 
         .zoom-controls button:hover {
@@ -696,12 +704,11 @@
                             <p>No graph loaded. Load a data source from the home page.</p>
                         </div>
                     {% endif %}
-                </div>
-
-                <div class="zoom-controls">
-                    <button id="btn-zoom-in" title="Zoom In">+</button>
-                    <button id="btn-zoom-out" title="Zoom Out">-</button>
-                    <button id="btn-zoom-reset" title="Reset Zoom">&#8634;</button>
+                    <div class="zoom-controls">
+                        <button id="btn-zoom-in" title="Zoom In">+</button>
+                        <button id="btn-zoom-out" title="Zoom Out">-</button>
+                        <button id="btn-zoom-reset" title="Reset Zoom">&#x21BB;</button>
+                    </div>
                 </div>
             </main>
 
