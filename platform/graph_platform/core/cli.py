@@ -98,6 +98,8 @@ class CliCommandExecutor:
 
             if verb == "delete" and entity == "node":
                 node_id = self._require_option(options, "id")
+                if node_id not in workspace.current_graph.nodes:
+                    raise CliCommandError(f"Node '{node_id}' does not exist.")
                 workspace.current_graph.remove_node(node_id)
                 return CliExecutionResult(message=f"Node '{node_id}' deleted.")
 
@@ -130,6 +132,8 @@ class CliCommandExecutor:
 
             if verb == "delete" and entity == "edge":
                 edge_id = self._require_option(options, "id")
+                if edge_id not in workspace.current_graph.edges:
+                    raise CliCommandError(f"Edge '{edge_id}' does not exist.")
                 workspace.current_graph.remove_edge(edge_id)
                 return CliExecutionResult(message=f"Edge '{edge_id}' deleted.")
 

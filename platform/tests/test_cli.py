@@ -75,6 +75,21 @@ class CliCommandExecutorTests(unittest.TestCase):
         with self.assertRaises(CliCommandError):
             self.executor.execute(self.workspace, "create node --property name=NoId")
 
+    def test_delete_node_twice_raises_error_second_time(self) -> None:
+        self.executor.execute(self.workspace, "create node --id=n3 --property name=Temp")
+        self.executor.execute(self.workspace, "delete node --id=n3")
+        with self.assertRaises(CliCommandError):
+            self.executor.execute(self.workspace, "delete node --id=n3")
+
+    def test_delete_edge_twice_raises_error_second_time(self) -> None:
+        self.executor.execute(
+            self.workspace,
+            "create edge --id=e1 --source=n1 --target=n2 --directed=true",
+        )
+        self.executor.execute(self.workspace, "delete edge --id=e1")
+        with self.assertRaises(CliCommandError):
+            self.executor.execute(self.workspace, "delete edge --id=e1")
+
 
 if __name__ == "__main__":
     unittest.main()
