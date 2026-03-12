@@ -19,15 +19,12 @@ BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent
 STATIC_DIR = PROJECT_ROOT / "graph_explorer" / "main" / "static"
 
-for package_dir in (
-    "api",
-    "platform",
-    "data_source_plugin_json",
-    "data_source_csv",
-    "simple_visualizer",
-    "block_visualizer",
+for resolved in (
+    PROJECT_ROOT,
+    PROJECT_ROOT / "platform",
+    PROJECT_ROOT / "api",
+    PROJECT_ROOT / "data_source_csv",
 ):
-    resolved = PROJECT_ROOT / package_dir
     if resolved.exists() and str(resolved) not in sys.path:
         sys.path.insert(0, str(resolved))
 
