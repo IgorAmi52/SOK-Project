@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import json
 from datetime import date
 from pathlib import Path
 from tempfile import gettempdir
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
 
 if TYPE_CHECKING:
     from graph_platform.core.cli import CliCommandExecutor
@@ -101,6 +103,61 @@ def home(request: HttpRequest) -> HttpResponse:
             "visualizers": visualizers,
         },
     )
+
+
+@csrf_exempt
+def api_cli(request: HttpRequest) -> HttpResponse:
+    from graph_platform.core.cli import CliCommandError
+
+    workspace_manager = _get_workspace_manager()
+    cli_executor = _get_cli_executor()
+
+    if workspace_manager is None or cli_executor is None:
+        return JsonResponse({"error": "Platform is not installed."}, status=500)
+
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    try:
+        payload = _parse_request_payload(request)
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+
+    workspace_id = str(payload.get("workspace_id", "")).strip()
+    command_text = str(payload.get("command", "")).strip()
+    if not workspace_id:
+        return JsonResponse({"error": "Missing required field: workspace_id."}, status=400)
+    if not command_text:
+        return JsonResponse({"error": "Missing required field: command."}, status=400)
+    if not workspace_manager.has(workspace_id):
+        return JsonResponse({"error": f"Workspace '{workspace_id}' not found."}, status=404)
+
+    workspace_state = workspace_manager.get(workspace_id)
+    metadata = _ensure_workspace_meta(workspace_id)
+
+    try:
+        execution_result = cli_executor.execute(workspace_state, command_text)
+        _append_cli_entry(metadata, command=command_text, output=execution_result.message)
+
+        if execution_result.operation == "search" and execution_result.query is not None:
+            metadata["search_query"] = execution_result.query
+        elif execution_result.operation == "filter" and execution_result.query is not None:
+            metadata["filter_query"] = execution_result.query
+        elif execution_result.operation == "clear":
+            metadata["search_query"] = ""
+            metadata["filter_query"] = ""
+
+        return JsonResponse(
+            {
+                "message": execution_result.message,
+                "operation": execution_result.operation,
+                "query": execution_result.query,
+                "workspace_id": workspace_id,
+            }
+        )
+    except CliCommandError as exc:
+        _append_cli_entry(metadata, command=command_text, output=f"ERROR: {exc}")
+        return JsonResponse({"error": str(exc)}, status=400)
 
 
 def workspace(request: HttpRequest) -> HttpResponse:
@@ -520,6 +577,21 @@ def _build_tree_graph_payload(graph) -> dict[str, object]:
         )
 
     return {"graph_id": graph.graph_id, "nodes": nodes, "edges": edges}
+
+
+def _parse_request_payload(request: HttpRequest) -> dict[str, str]:
+    if request.content_type and "application/json" in request.content_type:
+        raw_body = request.body.decode("utf-8").strip()
+        if not raw_body:
+            return {}
+        try:
+            payload = json.loads(raw_body)
+        except json.JSONDecodeError as exc:
+            raise ValueError("Invalid JSON payload.") from exc
+        if not isinstance(payload, dict):
+            raise ValueError("JSON payload must be an object.")
+        return {str(key): "" if value is None else str(value) for key, value in payload.items()}
+    return {str(key): str(value) for key, value in request.POST.items()}
 
 
 def _persist_uploaded_source_file(uploaded_file) -> str:
