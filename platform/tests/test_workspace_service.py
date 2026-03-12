@@ -1,6 +1,6 @@
 from __future__ import annotations
 from graph_platform.core.workspace_service import WorkspaceService
-from graph_platform.core.workspace import Workspace
+from graph_platform.core.workspace import Workspace, WorkspaceManager
 from graph_platform.core.errors import QueryValidationError
 from graph_api.model.node import Node
 from graph_api.model.graph import Graph
@@ -100,6 +100,26 @@ class WorkspaceServiceTests(unittest.TestCase):
                          "n1", "n2", "n3"})
         self.assertEqual(self.workspace.applied_filters, [])
         self.assertEqual(self.workspace.applied_searches, [])
+
+
+class WorkspaceManagerTests(unittest.TestCase):
+    def test_remove_and_has(self) -> None:
+        manager = WorkspaceManager()
+        graph = build_sample_graph()
+        workspace = Workspace(
+            workspace_id="ws-remove",
+            source_plugin_id="test-plugin",
+            source_parameters={},
+            base_graph=graph,
+            current_graph=graph,
+        )
+
+        manager.add(workspace)
+        self.assertTrue(manager.has("ws-remove"))
+
+        removed = manager.remove("ws-remove")
+        self.assertIsNotNone(removed)
+        self.assertFalse(manager.has("ws-remove"))
 
 
 if __name__ == "__main__":
