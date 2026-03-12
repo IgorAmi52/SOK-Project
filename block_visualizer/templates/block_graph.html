@@ -287,13 +287,29 @@
             clearTimeout(resizeTimer);
         }
         resizeTimer = setTimeout(() => {
+            const previousWidth = width;
+            const previousHeight = height;
+            const currentTransform = d3.zoomTransform(svg.node());
+
             applyViewportSize();
+            if (width === previousWidth && height === previousHeight) {
+                return;
+            }
+
             simulation.force("center", d3.forceCenter(width / 2, height / 2));
             simulation.alpha(0.12).restart();
-            fitGraphInView();
+
+            const adjustedTransform = d3.zoomIdentity
+                .translate(
+                    currentTransform.x + ((width - previousWidth) / 2),
+                    currentTransform.y + ((height - previousHeight) / 2)
+                )
+                .scale(currentTransform.k);
+            svg.call(zoom.transform, adjustedTransform);
         }, 120);
     }
     window.addEventListener("resize", onResize);
+    container.addEventListener("workspace:resize", onResize);
 
     requestAnimationFrame(() => {
         applyViewportSize();
