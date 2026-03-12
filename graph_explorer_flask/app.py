@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from graph_platform.core.workspace_service import WorkspaceService
 
 BASE_DIR = Path(__file__).resolve().parent
-STATIC_DIR = BASE_DIR.parent / "graph_explorer" / "static"
+STATIC_DIR = BASE_DIR.parent / "graph_explorer" / "main" / "static"
 
 app = Flask(
     __name__,
