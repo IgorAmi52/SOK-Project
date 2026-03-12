@@ -1,0 +1,945 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Graph Explorer - Workspace</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .header {
+            background: #16213e;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .header h1 {
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .header-controls select,
+        .header-controls button {
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid #0f3460;
+            background: #1a1a2e;
+            color: #eee;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .header-controls button:hover {
+            background: #0f3460;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: #16213e;
+            border-right: 1px solid #0f3460;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-color: #315d8f #111b36;
+            scrollbar-width: thin;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: #111b36;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #2c5b93, #1f4167);
+            border-radius: 10px;
+            border: 2px solid #111b36;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #3b73b6, #295784);
+        }
+
+        .sidebar-section {
+            padding: 16px;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .sidebar-section h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 12px;
+        }
+
+        .workspace-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .workspace-row {
+            display: block;
+        }
+
+        .workspace-btn {
+            width: 100%;
+            border: 1px solid #0f3460;
+            background: #1a1a2e;
+            color: #d6d6d6;
+            border-radius: 4px;
+            padding: 8px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 0.8rem;
+        }
+
+        .workspace-btn:hover {
+            background: #0f3460;
+        }
+
+        .workspace-btn.active {
+            border-color: #4ecdc4;
+            color: #4ecdc4;
+        }
+
+        .workspace-btn-title {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .workspace-btn-meta {
+            display: block;
+            font-size: 0.72rem;
+            color: #8fa0b3;
+        }
+
+        .workspace-empty {
+            color: #777;
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #0f3460;
+            background: #1a1a2e;
+            color: #eee;
+            font-size: 0.9rem;
+        }
+
+        .filter-box {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #0f3460;
+            background: #1a1a2e;
+            color: #eee;
+            font-size: 0.9rem;
+            margin-top: 8px;
+        }
+
+        .filter-hint {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 6px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .action-buttons button {
+            flex: 1;
+            padding: 8px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.85rem;
+            min-height: 36px;
+        }
+
+        .action-buttons form {
+            flex: 1;
+            margin: 0;
+        }
+
+        .action-buttons form button {
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: #4ecdc4;
+            color: #1a1a2e;
+        }
+
+        .btn-secondary {
+            background: #0f3460;
+            color: #eee;
+        }
+
+        .btn-primary:hover {
+            background: #3dbdb5;
+        }
+
+        .btn-secondary:hover {
+            background: #1a4a80;
+        }
+
+        .tree-view-section {
+            padding: 16px;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .tree-view-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .tree-view-header h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: #888;
+        }
+
+        .tree-root-select {
+            min-width: 110px;
+            max-width: 150px;
+            padding: 5px 8px;
+            border-radius: 4px;
+            border: 1px solid #0f3460;
+            background: #1a1a2e;
+            color: #eee;
+            font-size: 0.8rem;
+        }
+
+        .tree-view-container {
+            background: #1a1a2e;
+            border: 1px solid #0f3460;
+            border-radius: 4px;
+            min-height: 200px;
+            max-height: 260px;
+            overflow: auto;
+            padding: 8px;
+        }
+
+        .tree-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            color: #d6d6d6;
+            white-space: nowrap;
+        }
+
+        .tree-row:hover {
+            background: #0f346050;
+        }
+
+        .tree-row.selected {
+            background: #0f3460;
+            color: #4ecdc4;
+        }
+
+        .tree-row.cycle {
+            color: #ffb86c;
+        }
+
+        .tree-toggle {
+            width: 16px;
+            height: 16px;
+            border: 1px solid #0f3460;
+            border-radius: 2px;
+            background: #16213e;
+            color: #eee;
+            font-size: 0.72rem;
+            line-height: 1;
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+
+        .tree-toggle.empty {
+            visibility: hidden;
+        }
+
+        .tree-node-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tree-empty {
+            color: #666;
+            font-size: 0.82rem;
+            padding: 6px;
+        }
+
+        .tree-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .tree-controls button {
+            flex: 1;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #0f3460;
+            background: #16213e;
+            color: #eee;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .tree-controls button:hover {
+            background: #0f3460;
+        }
+
+        .tree-jump {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .tree-jump input {
+            flex: 1;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #0f3460;
+            background: #1a1a2e;
+            color: #eee;
+            font-size: 0.78rem;
+        }
+
+        .tree-jump button {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #0f3460;
+            background: #16213e;
+            color: #eee;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .tree-jump button:hover {
+            background: #0f3460;
+        }
+
+        .node-details {
+            padding: 16px;
+        }
+
+        .node-details h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 12px;
+        }
+
+        .node-details-content {
+            background: #1a1a2e;
+            border-radius: 4px;
+            padding: 12px;
+            font-size: 0.85rem;
+        }
+
+        .node-details-content .attr {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .node-details-content .attr:last-child {
+            border-bottom: none;
+        }
+
+        .node-details-content .attr-name {
+            color: #888;
+        }
+
+        .node-details-content .attr-value {
+            color: #4ecdc4;
+        }
+
+        .center-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .main-view {
+            flex: 1;
+            position: relative;
+            background: #0f0f1a;
+            overflow: hidden;
+        }
+
+        .main-view .simple-visualizer-container,
+        .main-view .block-visualizer-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .main-view .simple-visualizer-svg,
+        .main-view .block-visualizer-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 20;
+        }
+
+        .zoom-controls button {
+            width: 36px;
+            height: 36px;
+            border-radius: 4px;
+            border: 1px solid #0f3460;
+            background: #16213e;
+            color: #eee;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        .zoom-controls button:hover {
+            background: #0f3460;
+        }
+
+        .right-panel {
+            width: 260px;
+            background: #16213e;
+            border-left: 1px solid #0f3460;
+            display: flex;
+            flex-direction: column;
+            flex: 0 0 260px;
+            overflow: hidden;
+        }
+
+        .bird-view {
+            height: 180px;
+            border-bottom: 1px solid #0f3460;
+            position: relative;
+            background: #0f0f1a;
+        }
+
+        .bird-view-label {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: #666;
+        }
+
+        .bird-view svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .bird-view .viewport-rect {
+            fill: rgba(78, 205, 196, 0.1);
+            stroke: #4ecdc4;
+            stroke-width: 1;
+        }
+
+        .cli-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid #0f3460;
+            min-height: 240px;
+            padding: 6px;
+        }
+
+        .cli-header {
+            padding: 8px;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            color: #888;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .cli-output {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.72rem;
+            background: #101828;
+            color: #c7d2fe;
+            white-space: normal;
+            line-height: 1.5;
+            text-align: left;
+            scrollbar-color: #315d8f #111b36;
+            scrollbar-width: thin;
+        }
+
+        .cli-output::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .cli-output::-webkit-scrollbar-track {
+            background: #111b36;
+        }
+
+        .cli-output::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #2c5b93, #1f4167);
+            border-radius: 10px;
+            border: 2px solid #111b36;
+        }
+
+        .cli-output::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #3b73b6, #295784);
+        }
+
+        .cli-line {
+            margin-bottom: 6px;
+            padding-left: 0;
+        }
+
+        .cli-line-output {
+            white-space: pre-wrap;
+        }
+
+        .cli-line .cmd {
+            color: #4ecdc4;
+        }
+
+        .cli-input-wrap {
+            border-top: 1px solid #0f3460;
+            padding: 8px;
+            background: #111a2f;
+        }
+
+        .cli-input {
+            width: 100%;
+            border: 1px solid #0f3460;
+            border-radius: 4px;
+            background: #1a1a2e;
+            color: #eee;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.72rem;
+            padding: 7px;
+        }
+
+        .cli-input:disabled {
+            opacity: 0.6;
+        }
+
+        .status-bar {
+            padding: 8px 16px;
+            background: #0f0f1a;
+            border-top: 1px solid #0f3460;
+            font-size: 0.8rem;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+        }
+
+        .empty-state p {
+            margin-top: 12px;
+            font-size: 0.9rem;
+        }
+
+        .error-message {
+            background: #ff6b6b20;
+            border: 1px solid #ff6b6b;
+            color: #ff6b6b;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 16px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <form id="visualizer-form" method="post" style="display:none;">
+        <input type="hidden" name="action" value="set_visualizer">
+        <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
+        <input type="hidden" name="visualizer" id="visualizer-input">
+    </form>
+
+    <div class="app-container">
+        <header class="header">
+            <h1>Graph Explorer{% if active_workspace_name %} - {{ active_workspace_name }}{% endif %}</h1>
+            <div class="header-controls">
+                <select id="visualizer-select" {% if not active_workspace_id %}disabled{% endif %}>
+                    {% for vis in visualizers %}
+                        <option value="{{ vis.id }}" {% if vis.id == current_visualizer %}selected{% endif %}>
+                            {{ vis.name }}
+                        </option>
+                    {% empty %}
+                        <option value="">No visualizers available</option>
+                    {% endfor %}
+                </select>
+                <button id="btn-back" type="button" data-home-url="{{ url_for('home') }}">Back to Home</button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3>Workspaces</h3>
+                    <div class="workspace-list">
+                        {% for workspace in workspace_items %}
+                            <form class="workspace-row" method="post">
+                                <input type="hidden" name="action" value="switch_workspace">
+                                <input type="hidden" name="target_workspace_id" value="{{ workspace.id }}">
+                                <button
+                                    type="submit"
+                                    class="workspace-btn {% if workspace.is_active %}active{% endif %}"
+                                >
+                                    <span class="workspace-btn-title">{{ workspace.name }}</span>
+                                    <span class="workspace-btn-meta">Nodes: {{ workspace.node_count }} | Edges: {{ workspace.edge_count }}</span>
+                                </button>
+                            </form>
+                        {% empty %}
+                            <p class="workspace-empty">No workspaces loaded. Load graph from Home.</p>
+                        {% endfor %}
+                    </div>
+                    {% if active_workspace_id %}
+                        <div class="action-buttons">
+                            <form method="post">
+                                <input type="hidden" name="action" value="reset_workspace">
+                                <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
+                                <button class="btn-primary" type="submit">Reset</button>
+                            </form>
+                            <form method="post">
+                                <input type="hidden" name="action" value="delete_workspace">
+                                <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
+                                <button class="btn-secondary" type="submit">Delete</button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>Search</h3>
+                    <form method="post">
+                        <input type="hidden" name="action" value="search">
+                        <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
+                        <input type="text" class="search-box" id="search-input" name="search_query" placeholder="Search nodes..." value="{{ search_query or '' }}" {% if not active_workspace_id %}disabled{% endif %}>
+                        <div class="action-buttons">
+                            <button class="btn-primary" id="btn-search" type="submit" {% if not active_workspace_id %}disabled{% endif %}>Search</button>
+                            <button class="btn-secondary" id="btn-clear-search" type="button">Clear</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>Filter</h3>
+                    <form method="post">
+                        <input type="hidden" name="action" value="filter">
+                        <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
+                        <input type="text" class="filter-box" id="filter-input" name="filter_query" placeholder="e.g. age > 25" value="{{ filter_query or '' }}" {% if not active_workspace_id %}disabled{% endif %}>
+                        <p class="filter-hint">Format: attribute operator value</p>
+                        <div class="action-buttons">
+                            <button class="btn-primary" id="btn-filter" type="submit" {% if not active_workspace_id %}disabled{% endif %}>Apply</button>
+                            <button class="btn-secondary" id="btn-clear-filter" type="button">Clear</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="tree-view-section">
+                    <div class="tree-view-header">
+                        <h3>Tree View</h3>
+                        <select id="tree-root-select" class="tree-root-select" title="Select tree root"></select>
+                    </div>
+                    <div class="tree-controls">
+                        <button id="tree-expand-all" type="button">Expand All</button>
+                        <button id="tree-collapse-all" type="button">Collapse</button>
+                    </div>
+                    <div class="tree-jump">
+                        <input id="tree-jump-input" list="tree-jump-options" type="text" placeholder="Jump to node ID..." />
+                        <datalist id="tree-jump-options"></datalist>
+                        <button id="tree-jump-btn" type="button">Go</button>
+                    </div>
+                    <div id="tree-view" class="tree-view-container"></div>
+                </div>
+
+                <div class="node-details">
+                    <h3>Node Details</h3>
+                    <div class="node-details-content" id="node-details">
+                        <p style="color: #666;">Select a node to view details</p>
+                    </div>
+                </div>
+            </aside>
+
+            <main class="center-panel">
+                {% if error_message %}
+                    <div class="error-message">{{ error_message }}</div>
+                {% endif %}
+
+                <div class="main-view" id="main-view">
+                    {% if graph_html %}
+                        {{ graph_html|safe }}
+                    {% else %}
+                        <div class="empty-state">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                <circle cx="12" cy="12" r="10"/>
+                                <circle cx="8" cy="10" r="1.5" fill="currentColor"/>
+                                <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
+                                <circle cx="12" cy="16" r="1.5" fill="currentColor"/>
+                                <line x1="8" y1="10" x2="12" y2="16"/>
+                                <line x1="16" y1="10" x2="12" y2="16"/>
+                            </svg>
+                            <p>No graph loaded. Load a data source from the home page.</p>
+                        </div>
+                    {% endif %}
+                    <div class="zoom-controls">
+                        <button id="btn-zoom-in" title="Zoom In">+</button>
+                        <button id="btn-zoom-out" title="Zoom Out">-</button>
+                        <button id="btn-zoom-reset" title="Reset Zoom">&#x21BB;</button>
+                    </div>
+                </div>
+            </main>
+
+            <aside class="right-panel" id="right-panel">
+                <div class="bird-view">
+                    <span class="bird-view-label">Bird View</span>
+                    <svg id="bird-view-svg"></svg>
+                </div>
+                <div class="cli-panel">
+                    <div class="cli-header">CLI Terminal</div>
+                    <div class="cli-output" id="cli-output">
+                        {% for entry in cli_entries %}
+                            <div class="cli-line">
+                                <span class="cmd">&gt; {{ entry.command }}</span><br>
+                                <span class="cli-line-output">{{ entry.output }}</span>
+                            </div>
+                        {% empty %}
+                            <div class="cli-line">No commands yet. Type <span class="cmd">help</span>.</div>
+                        {% endfor %}
+                    </div>
+                    <div class="cli-input-wrap">
+                        <form method="post" id="cli-form">
+                            <input type="hidden" name="action" value="execute_cli">
+                            <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
+                            <input
+                                id="cli-input"
+                                name="cli_command"
+                                type="text"
+                                class="cli-input"
+                                autocomplete="off"
+                                {% if not active_workspace_id %}disabled{% endif %}
+                            />
+                        </form>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <footer class="status-bar">
+            <span id="status-nodes">Nodes: {{ node_count or 0 }}</span>
+            <span id="status-edges">Edges: {{ edge_count or 0 }}</span>
+            <span id="status-zoom">Zoom: 100%</span>
+        </footer>
+    </div>
+
+    <script id="tree-graph-data" type="application/json">{{ tree_graph | tojson }}</script>
+    <script id="cli-history-data" type="application/json">{{ cli_history | tojson }}</script>
+    <script src="{{ url_for('static', filename='main/js/tree_view.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const mainView = document.getElementById('main-view');
+            const container = mainView.querySelector('.simple-visualizer-container, .block-visualizer-container');
+            const treeGraphElement = document.getElementById('tree-graph-data');
+            const cliHistoryElement = document.getElementById('cli-history-data');
+            let treeGraphData = null;
+            let cliHistory = [];
+            if (treeGraphElement) {
+                treeGraphData = JSON.parse(treeGraphElement.textContent);
+            }
+            if (cliHistoryElement) {
+                cliHistory = JSON.parse(cliHistoryElement.textContent);
+            }
+
+            if (window.TreeView) {
+                window.TreeView.init({
+                    graphData: treeGraphData,
+                    containerId: 'tree-view',
+                    rootSelectId: 'tree-root-select',
+                    expandAllButtonId: 'tree-expand-all',
+                    collapseButtonId: 'tree-collapse-all',
+                    jumpInputId: 'tree-jump-input',
+                    jumpButtonId: 'tree-jump-btn',
+                    jumpOptionsId: 'tree-jump-options',
+                });
+            }
+
+            document.getElementById('btn-back').addEventListener('click', function() {
+                const homeUrl = this.dataset.homeUrl;
+                if (homeUrl) window.location.href = homeUrl;
+            });
+
+            document.getElementById('btn-zoom-in').addEventListener('click', function() {
+                if (container && container.zoomIn) container.zoomIn();
+            });
+
+            document.getElementById('btn-zoom-out').addEventListener('click', function() {
+                if (container && container.zoomOut) container.zoomOut();
+            });
+
+            document.getElementById('btn-zoom-reset').addEventListener('click', function() {
+                if (container && container.resetZoom) container.resetZoom();
+            });
+
+            document.getElementById('btn-clear-search').addEventListener('click', function() {
+                document.getElementById('search-input').value = '';
+            });
+
+            document.getElementById('btn-clear-filter').addEventListener('click', function() {
+                document.getElementById('filter-input').value = '';
+            });
+
+            // Visualizer change
+            document.getElementById('visualizer-select').addEventListener('change', function(e) {
+                const visualizerForm = document.getElementById('visualizer-form');
+                const visualizerInput = document.getElementById('visualizer-input');
+                if (!visualizerForm || !visualizerInput) return;
+                visualizerInput.value = e.target.value;
+                visualizerForm.submit();
+            });
+
+            const cliOutput = document.getElementById('cli-output');
+            if (cliOutput) {
+                cliOutput.scrollTop = cliOutput.scrollHeight;
+            }
+
+            const cliInput = document.getElementById('cli-input');
+            let cliHistoryIndex = cliHistory.length;
+            if (cliInput) {
+                cliInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'ArrowUp') {
+                        if (cliHistory.length === 0) return;
+                        e.preventDefault();
+                        cliHistoryIndex = Math.max(0, cliHistoryIndex - 1);
+                        cliInput.value = cliHistory[cliHistoryIndex] || '';
+                    } else if (e.key === 'ArrowDown') {
+                        if (cliHistory.length === 0) return;
+                        e.preventDefault();
+                        cliHistoryIndex = Math.min(cliHistory.length, cliHistoryIndex + 1);
+                        cliInput.value = cliHistoryIndex < cliHistory.length ? cliHistory[cliHistoryIndex] : '';
+                    }
+                });
+                cliInput.addEventListener('focus', function() {
+                    cliHistoryIndex = cliHistory.length;
+                });
+            }
+
+            // Node selection event listener
+            mainView.addEventListener('visualizer:select', function(e) {
+                const nodeData = e.detail.node;
+                updateNodeDetails(nodeData);
+                const nodeId = e.detail.nodeId || (nodeData ? nodeData.id : null);
+                if (window.TreeView && nodeId) {
+                    window.TreeView.setSelectedNode(nodeId);
+                }
+            });
+
+            // Tree -> Main synchronization
+            document.addEventListener('tree:select', function(e) {
+                const nodeData = e.detail.node;
+                const nodeId = e.detail.nodeId;
+                updateNodeDetails(nodeData);
+                if (container && container.focusNode && nodeId) {
+                    container.focusNode(nodeId);
+                } else if (container && container.selectNode && nodeId) {
+                    container.selectNode(nodeId);
+                }
+            });
+
+            // Zoom event listener for status bar
+            mainView.addEventListener('visualizer:zoom', function(e) {
+                const scale = e.detail.transform.k;
+                document.getElementById('status-zoom').textContent = 'Zoom: ' + Math.round(scale * 100) + '%';
+            });
+
+            function updateNodeDetails(node) {
+                const container = document.getElementById('node-details');
+                if (!node || !node.attributes) {
+                    container.innerHTML = '<p style="color: #666;">Select a node to view details</p>';
+                    return;
+                }
+
+                let html = '<div class="attr"><span class="attr-name">ID</span><span class="attr-value">' + node.id + '</span></div>';
+                for (const [key, value] of Object.entries(node.attributes)) {
+                    html += '<div class="attr"><span class="attr-name">' + key + '</span><span class="attr-value">' + value + '</span></div>';
+                }
+                container.innerHTML = html;
+            }
+        });
+    </script>
+</body>
+</html>
