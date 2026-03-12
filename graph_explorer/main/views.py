@@ -11,6 +11,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 
 if TYPE_CHECKING:
+    from graph_platform.core.cli import CliCommandExecutor
     from graph_platform.core.plugin_registry import PluginRegistry
     from graph_platform.core.workspace import Workspace, WorkspaceManager
     from graph_platform.core.workspace_service import WorkspaceService
@@ -18,7 +19,8 @@ if TYPE_CHECKING:
 
 _WORKSPACE_MANAGER: WorkspaceManager | None = None
 _WORKSPACE_SERVICE: WorkspaceService | None = None
-_WORKSPACE_META: dict[str, dict[str, str]] = {}
+_CLI_EXECUTOR: CliCommandExecutor | None = None
+_WORKSPACE_META: dict[str, dict[str, object]] = {}
 _WORKSPACE_ORDER: list[str] = []
 
 
@@ -59,6 +61,20 @@ def _get_workspace_service() -> WorkspaceService | None:
     return _WORKSPACE_SERVICE
 
 
+def _get_cli_executor() -> CliCommandExecutor | None:
+    global _CLI_EXECUTOR
+    if _CLI_EXECUTOR is not None:
+        return _CLI_EXECUTOR
+
+    try:
+        from graph_platform.core.cli import CliCommandExecutor
+    except ImportError:
+        return None
+
+    _CLI_EXECUTOR = CliCommandExecutor()
+    return _CLI_EXECUTOR
+
+
 def home(request: HttpRequest) -> HttpResponse:
     data_sources: list[dict[str, str]] = []
     visualizers: list[dict[str, str]] = []
@@ -94,6 +110,7 @@ def workspace(request: HttpRequest) -> HttpResponse:
     registry = _get_registry()
     workspace_manager = _get_workspace_manager()
     workspace_service = _get_workspace_service()
+    cli_executor = _get_cli_executor()
 
     error_message: str | None = None
     graph_html = None
@@ -104,10 +121,13 @@ def workspace(request: HttpRequest) -> HttpResponse:
     current_visualizer = "simple-visualizer"
     search_query = ""
     filter_query = ""
+    cli_history: list[str] = []
+    cli_output: list[str] = []
+    cli_entries: list[dict[str, str]] = []
     active_workspace_id = ""
     active_workspace_name = ""
 
-    if not registry or workspace_manager is None or workspace_service is None:
+    if not registry or workspace_manager is None or workspace_service is None or cli_executor is None:
         return render(
             request,
             "main/workspace.html",
@@ -121,6 +141,9 @@ def workspace(request: HttpRequest) -> HttpResponse:
                 "active_workspace_name": active_workspace_name,
                 "search_query": search_query,
                 "filter_query": filter_query,
+                "cli_history": cli_history,
+                "cli_output": cli_output,
+                "cli_entries": cli_entries,
             },
         )
 
@@ -211,6 +234,42 @@ def workspace(request: HttpRequest) -> HttpResponse:
                 metadata["filter_query"] = ""
             return _redirect_to_workspace(active_workspace_id)
 
+        elif action == "execute_cli":
+            from graph_platform.core.cli import CliCommandError
+
+            command_text = request.POST.get("cli_command", "").strip()
+            active_workspace_id = _resolve_active_workspace_id(active_workspace_id, workspace_manager)
+            if not active_workspace_id:
+                error_message = "Create a workspace before running CLI commands."
+            elif not command_text:
+                error_message = "CLI command cannot be empty."
+            else:
+                workspace_state = workspace_manager.get(active_workspace_id)
+                metadata = _ensure_workspace_meta(active_workspace_id)
+                try:
+                    execution_result = cli_executor.execute(workspace_state, command_text)
+                    _append_cli_entry(
+                        metadata,
+                        command=command_text,
+                        output=execution_result.message,
+                    )
+
+                    if execution_result.operation == "search" and execution_result.query is not None:
+                        metadata["search_query"] = execution_result.query
+                    elif execution_result.operation == "filter" and execution_result.query is not None:
+                        metadata["filter_query"] = execution_result.query
+                    elif execution_result.operation == "clear":
+                        metadata["search_query"] = ""
+                        metadata["filter_query"] = ""
+                except CliCommandError as exc:
+                    _append_cli_entry(
+                        metadata,
+                        command=command_text,
+                        output=f"ERROR: {exc}",
+                    )
+                    error_message = str(exc)
+            return _redirect_to_workspace(active_workspace_id)
+
         else:
             error_message = f"Unsupported action '{action}'."
 
@@ -236,10 +295,16 @@ def workspace(request: HttpRequest) -> HttpResponse:
     if active_workspace_id and workspace_manager.has(active_workspace_id):
         workspace_state = workspace_manager.get(active_workspace_id)
         metadata = _ensure_workspace_meta(active_workspace_id)
-        active_workspace_name = metadata.get("name", workspace_state.workspace_id)
-        current_visualizer = metadata.get("visualizer_id", "simple-visualizer")
-        search_query = metadata.get("search_query", "")
-        filter_query = metadata.get("filter_query", "")
+        active_workspace_name = str(metadata.get("name", workspace_state.workspace_id))
+        current_visualizer = str(metadata.get("visualizer_id", "simple-visualizer"))
+        search_query = str(metadata.get("search_query", ""))
+        filter_query = str(metadata.get("filter_query", ""))
+        cli_history = list(metadata.get("cli_history", []))
+        cli_output = list(metadata.get("cli_output", []))
+        cli_entries = [
+            {"command": command, "output": output}
+            for command, output in zip(cli_history, cli_output)
+        ]
 
         graph = workspace_state.current_graph
         node_count = len(graph.nodes)
@@ -275,6 +340,9 @@ def workspace(request: HttpRequest) -> HttpResponse:
             "workspace_items": workspace_items,
             "active_workspace_id": active_workspace_id,
             "active_workspace_name": active_workspace_name,
+            "cli_history": cli_history,
+            "cli_output": cli_output,
+            "cli_entries": cli_entries,
         },
     )
 
@@ -336,6 +404,8 @@ def _create_workspace_from_params(
         "visualizer_id": "simple-visualizer",
         "search_query": "",
         "filter_query": "",
+        "cli_history": [],
+        "cli_output": [],
     }
     return workspace_id, None
 
@@ -359,7 +429,7 @@ def _resolve_active_workspace_id(
     return ""
 
 
-def _ensure_workspace_meta(workspace_id: str) -> dict[str, str]:
+def _ensure_workspace_meta(workspace_id: str) -> dict[str, object]:
     metadata = _WORKSPACE_META.get(workspace_id)
     if metadata is None:
         metadata = {
@@ -367,6 +437,8 @@ def _ensure_workspace_meta(workspace_id: str) -> dict[str, str]:
             "visualizer_id": "simple-visualizer",
             "search_query": "",
             "filter_query": "",
+            "cli_history": [],
+            "cli_output": [],
         }
         _WORKSPACE_META[workspace_id] = metadata
     return metadata
@@ -385,13 +457,29 @@ def _build_workspace_items(
         items.append(
             {
                 "id": workspace_id,
-                "name": metadata.get("name", workspace_id),
+                "name": str(metadata.get("name", workspace_id)),
                 "is_active": workspace_id == active_workspace_id,
                 "node_count": len(workspace_state.current_graph.nodes),
                 "edge_count": len(workspace_state.current_graph.edges),
             }
         )
     return items
+
+
+def _append_cli_entry(metadata: dict[str, object], command: str, output: str) -> None:
+    history = list(metadata.get("cli_history", []))
+    messages = list(metadata.get("cli_output", []))
+    history.append(command)
+    messages.append(output)
+
+    max_entries = 100
+    if len(history) > max_entries:
+        history = history[-max_entries:]
+    if len(messages) > max_entries:
+        messages = messages[-max_entries:]
+
+    metadata["cli_history"] = history
+    metadata["cli_output"] = messages
 
 
 def _redirect_to_workspace(workspace_id: str) -> HttpResponse:
