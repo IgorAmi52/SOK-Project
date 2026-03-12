@@ -88,6 +88,56 @@
             margin-bottom: 12px;
         }
 
+        .workspace-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .workspace-row {
+            display: block;
+        }
+
+        .workspace-btn {
+            width: 100%;
+            border: 1px solid #0f3460;
+            background: #1a1a2e;
+            color: #d6d6d6;
+            border-radius: 4px;
+            padding: 8px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 0.8rem;
+        }
+
+        .workspace-btn:hover {
+            background: #0f3460;
+        }
+
+        .workspace-btn.active {
+            border-color: #4ecdc4;
+            color: #4ecdc4;
+        }
+
+        .workspace-btn-title {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .workspace-btn-meta {
+            display: block;
+            font-size: 0.72rem;
+            color: #8fa0b3;
+        }
+
+        .workspace-empty {
+            color: #777;
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+        }
+
         .search-box {
             width: 100%;
             padding: 8px 12px;
@@ -450,11 +500,18 @@
     </style>
 </head>
 <body>
+    <form id="visualizer-form" method="post" style="display:none;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="set_visualizer">
+        <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
+        <input type="hidden" name="visualizer" id="visualizer-input">
+    </form>
+
     <div class="app-container">
         <header class="header">
-            <h1>Graph Explorer</h1>
+            <h1>Graph Explorer{% if active_workspace_name %} - {{ active_workspace_name }}{% endif %}</h1>
             <div class="header-controls">
-                <select id="visualizer-select">
+                <select id="visualizer-select" {% if not active_workspace_id %}disabled{% endif %}>
                     {% for vis in visualizers %}
                         <option value="{{ vis.id }}" {% if vis.id == current_visualizer %}selected{% endif %}>
                             {{ vis.name }}
@@ -470,22 +527,70 @@
         <div class="main-content">
             <aside class="sidebar">
                 <div class="sidebar-section">
-                    <h3>Search</h3>
-                    <input type="text" class="search-box" id="search-input" placeholder="Search nodes..." value="{{ search_query|default:'' }}">
-                    <div class="action-buttons">
-                        <button class="btn-primary" id="btn-search">Search</button>
-                        <button class="btn-secondary" id="btn-clear-search">Clear</button>
+                    <h3>Workspaces</h3>
+                    <div class="workspace-list">
+                        {% for workspace in workspace_items %}
+                            <form class="workspace-row" method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="switch_workspace">
+                                <input type="hidden" name="target_workspace_id" value="{{ workspace.id }}">
+                                <button
+                                    type="submit"
+                                    class="workspace-btn {% if workspace.is_active %}active{% endif %}"
+                                >
+                                    <span class="workspace-btn-title">{{ workspace.name }}</span>
+                                    <span class="workspace-btn-meta">Nodes: {{ workspace.node_count }} | Edges: {{ workspace.edge_count }}</span>
+                                </button>
+                            </form>
+                        {% empty %}
+                            <p class="workspace-empty">No workspaces loaded. Load graph from Home.</p>
+                        {% endfor %}
                     </div>
+                    {% if active_workspace_id %}
+                        <div class="action-buttons">
+                            <form method="post" style="flex:1;">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="reset_workspace">
+                                <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
+                                <button class="btn-primary" type="submit">Reset</button>
+                            </form>
+                            <form method="post" style="flex:1;">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_workspace">
+                                <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
+                                <button class="btn-secondary" type="submit">Delete</button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>Search</h3>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="search">
+                        <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
+                        <input type="text" class="search-box" id="search-input" name="search_query" placeholder="Search nodes..." value="{{ search_query|default:'' }}" {% if not active_workspace_id %}disabled{% endif %}>
+                        <div class="action-buttons">
+                            <button class="btn-primary" id="btn-search" type="submit" {% if not active_workspace_id %}disabled{% endif %}>Search</button>
+                            <button class="btn-secondary" id="btn-clear-search" type="button">Clear</button>
+                        </div>
+                    </form>
                 </div>
 
                 <div class="sidebar-section">
                     <h3>Filter</h3>
-                    <input type="text" class="filter-box" id="filter-input" placeholder="e.g. age > 25" value="{{ filter_query|default:'' }}">
-                    <p class="filter-hint">Format: attribute operator value</p>
-                    <div class="action-buttons">
-                        <button class="btn-primary" id="btn-filter">Apply</button>
-                        <button class="btn-secondary" id="btn-clear-filter">Clear</button>
-                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="filter">
+                        <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
+                        <input type="text" class="filter-box" id="filter-input" name="filter_query" placeholder="e.g. age > 25" value="{{ filter_query|default:'' }}" {% if not active_workspace_id %}disabled{% endif %}>
+                        <p class="filter-hint">Format: attribute operator value</p>
+                        <div class="action-buttons">
+                            <button class="btn-primary" id="btn-filter" type="submit" {% if not active_workspace_id %}disabled{% endif %}>Apply</button>
+                            <button class="btn-secondary" id="btn-clear-filter" type="button">Clear</button>
+                        </div>
+                    </form>
                 </div>
 
                 <div class="tree-view-section">
@@ -563,7 +668,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const mainView = document.getElementById('main-view');
-            const container = mainView.querySelector('.simple-visualizer-container');
+            const container = mainView.querySelector('.simple-visualizer-container, .block-visualizer-container');
             const treeGraphElement = document.getElementById('tree-graph-data');
             let treeGraphData = null;
             if (treeGraphElement) {
@@ -600,52 +705,21 @@
                 if (container && container.resetZoom) container.resetZoom();
             });
 
-            // Search functionality
-            document.getElementById('btn-search').addEventListener('click', function() {
-                const query = document.getElementById('search-input').value.trim();
-                const url = new URL(window.location.href);
-                if (!query) return;
-                url.searchParams.append('search', query);
-                window.location.href = url.toString();
-            });
-
             document.getElementById('btn-clear-search').addEventListener('click', function() {
                 document.getElementById('search-input').value = '';
-                const url = new URL(window.location.href);
-                url.searchParams.delete('search');
-                window.location.href = url.toString();
-            });
-
-            // Filter functionality
-            document.getElementById('btn-filter').addEventListener('click', function() {
-                const query = document.getElementById('filter-input').value.trim();
-                const url = new URL(window.location.href);
-                if (!query) return;
-                url.searchParams.append('filter', query);
-                window.location.href = url.toString();
             });
 
             document.getElementById('btn-clear-filter').addEventListener('click', function() {
                 document.getElementById('filter-input').value = '';
-                const url = new URL(window.location.href);
-                url.searchParams.delete('filter');
-                window.location.href = url.toString();
-            });
-
-            // Enter key support for search/filter
-            document.getElementById('search-input').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') document.getElementById('btn-search').click();
-            });
-
-            document.getElementById('filter-input').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') document.getElementById('btn-filter').click();
             });
 
             // Visualizer change
             document.getElementById('visualizer-select').addEventListener('change', function(e) {
-                const url = new URL(window.location.href);
-                url.searchParams.set('visualizer', e.target.value);
-                window.location.href = url.toString();
+                const visualizerForm = document.getElementById('visualizer-form');
+                const visualizerInput = document.getElementById('visualizer-input');
+                if (!visualizerForm || !visualizerInput) return;
+                visualizerInput.value = e.target.value;
+                visualizerForm.submit();
             });
 
             // Node selection event listener
