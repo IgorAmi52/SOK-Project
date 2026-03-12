@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "block-visualizer"
+version = "0.1.0"
+description = "Block visualizer plugin for graph visualization platform"
+requires-python = ">=3.11"
+dependencies = [
+    "graph-api",
+    "jinja2>=3.0"
+]
+
+[tool.setuptools]
+packages = ["block_visualizer"]
+
+[tool.setuptools.package-dir]
+block_visualizer = "."
+
+[tool.setuptools.package-data]
+block_visualizer = ["templates/*.html"]
