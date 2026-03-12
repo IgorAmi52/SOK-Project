@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+import sys
 from pathlib import Path
 from tempfile import gettempdir
 from typing import TYPE_CHECKING
@@ -15,7 +16,20 @@ if TYPE_CHECKING:
     from graph_platform.core.workspace_service import WorkspaceService
 
 BASE_DIR = Path(__file__).resolve().parent
-STATIC_DIR = BASE_DIR.parent / "graph_explorer" / "main" / "static"
+PROJECT_ROOT = BASE_DIR.parent
+STATIC_DIR = PROJECT_ROOT / "graph_explorer" / "main" / "static"
+
+for package_dir in (
+    "api",
+    "platform",
+    "data_source_plugin_json",
+    "data_source_csv",
+    "simple_visualizer",
+    "block_visualizer",
+):
+    resolved = PROJECT_ROOT / package_dir
+    if resolved.exists() and str(resolved) not in sys.path:
+        sys.path.insert(0, str(resolved))
 
 app = Flask(
     __name__,
