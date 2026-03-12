@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import date
 from pathlib import Path
 
@@ -70,9 +71,11 @@ class SimpleGraphRenderer:
                 "attributes": attrs,
             })
 
+        safe_graph_id = re.sub(r"[^0-9A-Za-z_]", "_", graph.graph_id)
+
         template = self._env.get_template("simple_graph.html")
         return template.render(
-            graph_id=graph.graph_id.replace(" ", "_").replace("-", "_"),
+            graph_id=safe_graph_id,
             nodes_json=json.dumps(nodes_data),
             edges_json=json.dumps(edges_data),
             selected_node_id_json=json.dumps(selected_node_id),
