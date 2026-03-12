@@ -4,7 +4,7 @@ from datetime import date
 from pathlib import Path
 from tempfile import gettempdir
 from typing import TYPE_CHECKING
-from urllib.parse import urlencode
+from urllib.parse import parse_qsl, urlencode
 from uuid import uuid4
 
 from django.http import HttpRequest, HttpResponse
@@ -54,6 +54,10 @@ def home(request: HttpRequest) -> HttpResponse:
 
 def workspace(request: HttpRequest) -> HttpResponse:
     """Main workspace view for graph visualization."""
+    from graph_platform.core.errors import QueryValidationError
+    from graph_platform.core.workspace import Workspace
+    from graph_platform.core.workspace_service import WorkspaceService
+
     registry = _get_registry()
     error_message = None
     graph_html = None
@@ -62,8 +66,12 @@ def workspace(request: HttpRequest) -> HttpResponse:
     edge_count = 0
     visualizers: list[dict[str, str]] = []
     current_visualizer = request.GET.get("visualizer", "simple-visualizer")
-    search_query = request.GET.get("search", "")
-    filter_query = request.GET.get("filter", "")
+    search_queries = [value for value in request.GET.getlist(
+        "search") if value.strip()]
+    filter_queries = [value for value in request.GET.getlist(
+        "filter") if value.strip()]
+    search_query = search_queries[-1] if search_queries else ""
+    filter_query = filter_queries[-1] if filter_queries else ""
 
     # Get data source and file path from query params
     data_source_id = request.GET.get("data_source", "")
@@ -121,17 +129,29 @@ def workspace(request: HttpRequest) -> HttpResponse:
                 value = request.GET.get(parameter.name, "").strip()
                 if value:
                     load_params[parameter.name] = value
-            graph = data_source.load_graph(load_params)
+            base_graph = data_source.load_graph(load_params)
+            workspace_state = Workspace(
+                workspace_id=f"workspace:{data_source_id}",
+                source_plugin_id=data_source_id,
+                source_parameters=load_params,
+                base_graph=base_graph,
+                current_graph=base_graph,
+            )
+            workspace_service = WorkspaceService()
 
-            # Apply search if provided
-            if search_query:
-                graph = _apply_search(graph, search_query)
+            for operation_name, query_text in _iter_graph_operations(request):
+                try:
+                    if operation_name == "search":
+                        workspace_service.apply_search(
+                            workspace_state, query_text)
+                    elif operation_name == "filter":
+                        workspace_service.apply_filter(
+                            workspace_state, query_text)
+                except QueryValidationError as ex:
+                    error_message = str(ex)
+                    break
 
-            # Apply filter if provided
-            if filter_query:
-                graph, filter_error = _apply_filter(graph, filter_query)
-                if filter_error:
-                    error_message = filter_error
+            graph = workspace_state.current_graph
 
             node_count = len(graph.nodes)
             edge_count = len(graph.edges)
@@ -164,81 +184,15 @@ def workspace(request: HttpRequest) -> HttpResponse:
     )
 
 
-def _apply_search(graph, query: str):
-    """Filter graph nodes that contain the search query in attribute names or values."""
-    from graph_api.model.graph import Graph
-
-    query_lower = query.lower()
-    matching_node_ids = set()
-
-    for node_id, node in graph.nodes.items():
-        # Check if query matches node_id
-        if query_lower in node_id.lower():
-            matching_node_ids.add(node_id)
+def _iter_graph_operations(request: HttpRequest) -> list[tuple[str, str]]:
+    operations: list[tuple[str, str]] = []
+    for key, value in parse_qsl(request.META.get("QUERY_STRING", ""), keep_blank_values=False):
+        if key not in {"search", "filter"}:
             continue
-
-        # Check if query matches any attribute name or value
-        for attr_name, attr_value in node.attributes.items():
-            if query_lower in attr_name.lower() or query_lower in str(attr_value).lower():
-                matching_node_ids.add(node_id)
-                break
-
-    return graph.create_subgraph(matching_node_ids, f"{graph.graph_id}_search")
-
-
-def _apply_filter(graph, filter_query: str) -> tuple:
-    """Apply filter to graph. Returns (filtered_graph, error_message)."""
-    import re
-    from graph_api.model.graph import Graph
-
-    # Parse filter: attribute operator value
-    pattern = r"^\s*(\w+)\s*(==|!=|>=|<=|>|<)\s*(.+)\s*$"
-    match = re.match(pattern, filter_query)
-
-    if not match:
-        return graph, "Invalid filter format. Use: attribute operator value"
-
-    attr_name, operator, raw_value = match.groups()
-    raw_value = raw_value.strip().strip('"').strip("'")
-
-    matching_node_ids = set()
-
-    for node_id, node in graph.nodes.items():
-        if attr_name not in node.attributes:
-            continue
-
-        attr_value = node.attributes[attr_name]
-
-        # Try to parse the filter value to match the attribute type
-        try:
-            if isinstance(attr_value, int):
-                compare_value = int(raw_value)
-            elif isinstance(attr_value, float):
-                compare_value = float(raw_value)
-            else:
-                compare_value = raw_value
-        except ValueError:
-            compare_value = raw_value
-
-        # Apply comparison
-        try:
-            if operator == "==" and attr_value == compare_value:
-                matching_node_ids.add(node_id)
-            elif operator == "!=" and attr_value != compare_value:
-                matching_node_ids.add(node_id)
-            elif operator == ">" and attr_value > compare_value:
-                matching_node_ids.add(node_id)
-            elif operator == ">=" and attr_value >= compare_value:
-                matching_node_ids.add(node_id)
-            elif operator == "<" and attr_value < compare_value:
-                matching_node_ids.add(node_id)
-            elif operator == "<=" and attr_value <= compare_value:
-                matching_node_ids.add(node_id)
-        except TypeError:
-            # Type mismatch in comparison
-            continue
-
-    return graph.create_subgraph(matching_node_ids, f"{graph.graph_id}_filter"), None
+        query_text = value.strip()
+        if query_text:
+            operations.append((key, query_text))
+    return operations
 
 
 def _serialize_attribute_value(value: int | str | float | date) -> str | int | float:

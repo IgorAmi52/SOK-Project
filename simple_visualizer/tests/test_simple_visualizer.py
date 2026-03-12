@@ -154,3 +154,13 @@ class TestSimpleGraphRenderer:
 
         # Spaces and dashes should be replaced with underscores
         assert "my_test_graph" in result
+
+    def test_graph_id_with_colons_is_sanitized(self) -> None:
+        graph = Graph(graph_id="workspace:json:filter:1")
+        graph.add_node(Node(node_id="n1"))
+
+        renderer = SimpleGraphRenderer()
+        result = renderer.render(graph)
+
+        # Colons must be sanitized because the ID is used in CSS selectors.
+        assert "workspace_json_filter_1" in result

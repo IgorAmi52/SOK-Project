@@ -463,7 +463,7 @@
                         <option value="">No visualizers available</option>
                     {% endfor %}
                 </select>
-                <button id="btn-back" onclick="window.location.href='{% url 'home' %}'">Back to Home</button>
+                <button id="btn-back" type="button" data-home-url="{% url 'home' %}">Back to Home</button>
             </div>
         </header>
 
@@ -583,7 +583,11 @@
                 });
             }
 
-            // Zoom controls
+            document.getElementById('btn-back').addEventListener('click', function() {
+                const homeUrl = this.dataset.homeUrl;
+                if (homeUrl) window.location.href = homeUrl;
+            });
+
             document.getElementById('btn-zoom-in').addEventListener('click', function() {
                 if (container && container.zoomIn) container.zoomIn();
             });
@@ -598,10 +602,10 @@
 
             // Search functionality
             document.getElementById('btn-search').addEventListener('click', function() {
-                const query = document.getElementById('search-input').value;
+                const query = document.getElementById('search-input').value.trim();
                 const url = new URL(window.location.href);
-                url.searchParams.set('search', query);
-                url.searchParams.delete('filter');
+                if (!query) return;
+                url.searchParams.append('search', query);
                 window.location.href = url.toString();
             });
 
@@ -614,10 +618,10 @@
 
             // Filter functionality
             document.getElementById('btn-filter').addEventListener('click', function() {
-                const query = document.getElementById('filter-input').value;
+                const query = document.getElementById('filter-input').value.trim();
                 const url = new URL(window.location.href);
-                url.searchParams.set('filter', query);
-                url.searchParams.delete('search');
+                if (!query) return;
+                url.searchParams.append('filter', query);
                 window.location.href = url.toString();
             });
 
