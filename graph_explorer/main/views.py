@@ -184,7 +184,7 @@ def workspace(request: HttpRequest) -> HttpResponse:
     active_workspace_id = ""
     active_workspace_name = ""
 
-    if not registry or workspace_manager is None or workspace_service is None or cli_executor is None:
+    if not registry or workspace_manager is None or workspace_service is None:
         return render(
             request,
             "main/workspace.html",
@@ -296,7 +296,9 @@ def workspace(request: HttpRequest) -> HttpResponse:
 
             command_text = request.POST.get("cli_command", "").strip()
             active_workspace_id = _resolve_active_workspace_id(active_workspace_id, workspace_manager)
-            if not active_workspace_id:
+            if cli_executor is None:
+                error_message = "CLI is not available."
+            elif not active_workspace_id:
                 error_message = "Create a workspace before running CLI commands."
             elif not command_text:
                 error_message = "CLI command cannot be empty."

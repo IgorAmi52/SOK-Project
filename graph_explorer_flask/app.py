@@ -151,7 +151,7 @@ def workspace() -> str:
     active_workspace_id = ""
     active_workspace_name = ""
 
-    if not registry or workspace_manager is None or workspace_service is None or cli_executor is None:
+    if not registry or workspace_manager is None or workspace_service is None:
         return render_template(
             "main/workspace.html",
             error_message="Platform is not installed.",
@@ -260,7 +260,9 @@ def workspace() -> str:
 
             command_text = request.form.get("cli_command", "").strip()
             active_workspace_id = _resolve_active_workspace_id(active_workspace_id, workspace_manager)
-            if not active_workspace_id:
+            if cli_executor is None:
+                error_message = "CLI is not available."
+            elif not active_workspace_id:
                 error_message = "Create a workspace before running CLI commands."
             elif not command_text:
                 error_message = "CLI command cannot be empty."
