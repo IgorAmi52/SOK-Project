@@ -385,12 +385,16 @@ def _create_workspace_from_params(
         return None, f"Error loading graph: {exc}"
 
     workspace_id = f"workspace-{uuid4().hex[:8]}"
+    current_graph = base_graph.create_subgraph(
+        set(base_graph.nodes.keys()),
+        subgraph_id=base_graph.graph_id,
+    )
     workspace_state = Workspace(
         workspace_id=workspace_id,
         source_plugin_id=data_source_id,
         source_parameters=load_params,
         base_graph=base_graph,
-        current_graph=base_graph,
+        current_graph=current_graph,
     )
     workspace_manager.add(workspace_state)
     _WORKSPACE_ORDER.append(workspace_id)

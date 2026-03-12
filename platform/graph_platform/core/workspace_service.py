@@ -35,7 +35,7 @@ class WorkspaceService:
         return next_graph
 
     def reset_graph(self, workspace: Workspace) -> Graph:
-        workspace.current_graph = workspace.base_graph
+        workspace.current_graph = self._clone_graph(workspace.base_graph)
         workspace.applied_filters.clear()
         workspace.applied_searches.clear()
         return workspace.current_graph
@@ -44,3 +44,9 @@ class WorkspaceService:
         sequence = len(workspace.applied_filters) + \
             len(workspace.applied_searches) + 1
         return f"{workspace.workspace_id}:{operation_name}:{sequence}"
+
+    def _clone_graph(self, graph: Graph) -> Graph:
+        return graph.create_subgraph(
+            set(graph.nodes.keys()),
+            subgraph_id=graph.graph_id,
+        )
