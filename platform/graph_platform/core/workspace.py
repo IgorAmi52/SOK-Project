@@ -28,5 +28,11 @@ class WorkspaceManager:
     def get(self, workspace_id: str) -> Workspace:
         return self._workspaces[workspace_id]
 
+    def remove(self, workspace_id: str) -> Workspace | None:
+        return self._workspaces.pop(workspace_id, None)
+
+    def has(self, workspace_id: str) -> bool:
+        return workspace_id in self._workspaces
+
     def list_all(self) -> list[Workspace]:
         return list(self._workspaces.values())
