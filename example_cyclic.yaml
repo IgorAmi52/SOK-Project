@@ -1,0 +1,9 @@
+"@id": parent-1
+name: "I'm parent"
+children:
+  - "@id": child-1
+    name: "I'm first child"
+    parent: parent-1
+  - "@id": child-2
+    name: "I'm second child"
+    parent: parent-1

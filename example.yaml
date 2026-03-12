@@ -1,0 +1,80 @@
+id: id1
+first: Abraham
+last: Doe
+years: 88
+children:
+  - id: id2
+    first: John
+    last: Doe
+    years: 62
+    children:
+      - id: id3
+        first: Michael
+        last: Doe
+        years: 38
+        children:
+          - id: id4
+            first: Kevin
+            last: Doe
+            years: 12
+            children: []
+          - id: id5
+            first: Sarah
+            last: Doe
+            years: 10
+            children: []
+          - id: id6
+            first: James
+            last: Doe
+            years: 7
+            children: []
+      - id: id7
+        first: Emily
+        last: Smith
+        years: 35
+        children:
+          - id: id8
+            first: Lily
+            last: Smith
+            years: 5
+            children: []
+          - id: id9
+            first: Noah
+            last: Smith
+            years: 3
+            children: []
+  - id: id10
+    first: Mary
+    last: Johnson
+    years: 58
+    children:
+      - id: id11
+        first: Oliver
+        last: Johnson
+        years: 30
+        children:
+          - id: id12
+            first: Emma
+            last: Johnson
+            years: 4
+            children: []
+      - id: id13
+        first: Sophia
+        last: Johnson
+        years: 28
+        children: []
+  - id: id14
+    first: Robert
+    last: Doe
+    years: 55
+    children:
+      - id: id15
+        first: Lucas
+        last: Doe
+        years: 25
+        children: []
+      - id: id16
+        first: Mia
+        last: Doe
+        years: 22
+        children: []
