@@ -111,9 +111,10 @@ class CliCommandExecutor:
                 source_id = self._require_option(options, "source")
                 target_id = self._require_option(options, "target")
                 directed_raw = str(options.get("directed", "")).strip()
-                if not directed_raw:
-                    directed_raw = "true"
-                directed = self._parse_bool(directed_raw)
+                if directed_raw:
+                    directed = self._parse_bool(directed_raw)
+                else:
+                    directed = workspace.current_graph.directed_default
                 edge = Edge(
                     edge_id=edge_id,
                     source_id=source_id,
