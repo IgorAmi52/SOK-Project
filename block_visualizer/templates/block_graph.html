@@ -13,6 +13,7 @@
     let currentSelectedNodeId = {{ selected_node_id_json | safe }};
     let pendingFocusNodeId = null;
     let hasAutoFitRun = false;
+    let stateEmitScheduled = false;
 
     let width = 900;
     let height = 650;
@@ -40,6 +41,7 @@
                 detail: { transform: event.transform },
                 bubbles: true
             }));
+            scheduleStateEmit();
         });
 
     svg.call(zoom);
@@ -150,6 +152,8 @@
             pendingFocusNodeId = null;
             focusNode(nodeId);
         }
+
+        scheduleStateEmit();
     });
     simulation.on("end", () => {
         if (hasAutoFitRun || nodes.length === 0) {
@@ -159,12 +163,62 @@
         fitGraphInView();
     });
 
+    function normalizeLinkEndpoint(endpoint) {
+        return typeof endpoint === "object" ? endpoint.id : endpoint;
+    }
+
+    function buildViewState() {
+        const currentTransform = d3.zoomTransform(svg.node());
+        return {
+            nodes: nodes.map((nodeDatum) => ({
+                id: nodeDatum.id,
+                x: typeof nodeDatum.x === "number" ? nodeDatum.x : 0,
+                y: typeof nodeDatum.y === "number" ? nodeDatum.y : 0,
+                width: nodeDatum.width || 180,
+                height: nodeDatum.height || 80,
+                attributes: nodeDatum.attributes || {},
+            })),
+            edges: links.map((edgeDatum) => ({
+                id: edgeDatum.id,
+                sourceId: normalizeLinkEndpoint(edgeDatum.source),
+                targetId: normalizeLinkEndpoint(edgeDatum.target),
+                directed: !!edgeDatum.directed,
+            })),
+            selectedNodeId: currentSelectedNodeId,
+            transform: {
+                x: currentTransform.x,
+                y: currentTransform.y,
+                k: currentTransform.k,
+            },
+            canvas: {
+                width,
+                height,
+            },
+        };
+    }
+
+    function scheduleStateEmit() {
+        if (stateEmitScheduled) {
+            return;
+        }
+
+        stateEmitScheduled = true;
+        requestAnimationFrame(() => {
+            stateEmitScheduled = false;
+            container.dispatchEvent(new CustomEvent("visualizer:state", {
+                detail: buildViewState(),
+                bubbles: true
+            }));
+        });
+    }
+
     function applySelection(nodeId) {
         currentSelectedNodeId = nodeId || null;
         node.select("rect")
             .attr("fill", d => d.id === currentSelectedNodeId ? "#0f172a" : "#1f2937")
             .attr("stroke", d => d.id === currentSelectedNodeId ? "#38bdf8" : "#334155")
             .attr("stroke-width", d => d.id === currentSelectedNodeId ? 3 : 2);
+        scheduleStateEmit();
     }
 
     function focusNode(nodeId, zoomScale = 1.4) {
@@ -274,6 +328,19 @@
     container.resetZoom = () => fitGraphInView();
     container.selectNode = (nodeId) => applySelection(nodeId);
     container.focusNode = (nodeId) => focusNode(nodeId);
+    container.getViewState = () => buildViewState();
+    container.setViewTransform = (transform, animate = true) => {
+        const nextTransform = d3.zoomIdentity
+            .translate(transform.x ?? 0, transform.y ?? 0)
+            .scale(transform.k ?? 1);
+
+        if (animate) {
+            svg.transition().duration(120).call(zoom.transform, nextTransform);
+            return;
+        }
+
+        svg.call(zoom.transform, nextTransform);
+    };
     container.addEventListener("workspace:select-node", function(event) {
         if (!event.detail || !event.detail.nodeId) {
             return;
@@ -324,5 +391,6 @@
     });
 
     applySelection(currentSelectedNodeId);
+    scheduleStateEmit();
 })();
 </script>

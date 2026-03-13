@@ -810,6 +810,7 @@
     <script id="tree-graph-data" type="application/json">{{ tree_graph | tojson }}</script>
     <script id="cli-history-data" type="application/json">{{ cli_history | tojson }}</script>
     <script src="{{ url_for('static', filename='platform_django/js/tree_view.js') }}"></script>
+    <script src="{{ url_for('static', filename='platform_django/js/bird_view.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const mainView = document.getElementById('main-view');
@@ -835,6 +836,14 @@
                     jumpInputId: 'tree-jump-input',
                     jumpButtonId: 'tree-jump-btn',
                     jumpOptionsId: 'tree-jump-options',
+                });
+            }
+
+            if (window.BirdView) {
+                window.BirdView.init({
+                    mainViewId: 'main-view',
+                    birdSvgId: 'bird-view-svg',
+                    visualizerContainer: container,
                 });
             }
 
