@@ -1,12 +1,11 @@
 from __future__ import annotations
 
+import json
 from datetime import date
 from pathlib import Path
 from tempfile import gettempdir
 from typing import TYPE_CHECKING
 from uuid import uuid4
-
-import json
 
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import redirect, render
@@ -18,7 +17,6 @@ if TYPE_CHECKING:
     from graph_platform.core.plugin_registry import PluginRegistry
     from graph_platform.core.workspace import Workspace, WorkspaceManager
     from graph_platform.core.workspace_service import WorkspaceService
-
 
 _WORKSPACE_MANAGER: WorkspaceManager | None = None
 _WORKSPACE_SERVICE: WorkspaceService | None = None
@@ -112,6 +110,61 @@ def home(request: HttpRequest) -> HttpResponse:
             "workspace_items": workspace_items,
         },
     )
+
+
+@csrf_exempt
+def api_cli(request: HttpRequest) -> HttpResponse:
+    from graph_platform.core.cli import CliCommandError
+
+    workspace_manager = _get_workspace_manager()
+    cli_executor = _get_cli_executor()
+
+    if workspace_manager is None or cli_executor is None:
+        return JsonResponse({"error": "Platform is not installed."}, status=500)
+
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    try:
+        payload = _parse_request_payload(request)
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+
+    workspace_id = str(payload.get("workspace_id", "")).strip()
+    command_text = str(payload.get("command", "")).strip()
+    if not workspace_id:
+        return JsonResponse({"error": "Missing required field: workspace_id."}, status=400)
+    if not command_text:
+        return JsonResponse({"error": "Missing required field: command."}, status=400)
+    if not workspace_manager.has(workspace_id):
+        return JsonResponse({"error": f"Workspace '{workspace_id}' not found."}, status=404)
+
+    workspace_state = workspace_manager.get(workspace_id)
+    metadata = _ensure_workspace_meta(workspace_id)
+
+    try:
+        execution_result = cli_executor.execute(workspace_state, command_text)
+        _append_cli_entry(metadata, command=command_text, output=execution_result.message)
+
+        if execution_result.operation == "search" and execution_result.query is not None:
+            metadata["search_query"] = execution_result.query
+        elif execution_result.operation == "filter" and execution_result.query is not None:
+            metadata["filter_query"] = execution_result.query
+        elif execution_result.operation == "clear":
+            metadata["search_query"] = ""
+            metadata["filter_query"] = ""
+
+        return JsonResponse(
+            {
+                "message": execution_result.message,
+                "operation": execution_result.operation,
+                "query": execution_result.query,
+                "workspace_id": workspace_id,
+            }
+        )
+    except CliCommandError as exc:
+        _append_cli_entry(metadata, command=command_text, output=f"ERROR: {exc}")
+        return JsonResponse({"error": str(exc)}, status=400)
 
 
 @csrf_exempt

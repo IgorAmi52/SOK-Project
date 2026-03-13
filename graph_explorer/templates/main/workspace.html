@@ -673,13 +673,13 @@
                     </div>
                     {% if active_workspace_id %}
                         <div class="action-buttons">
-                            <form method="post">
+                            <form method="post" style="flex:1;">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="reset_workspace">
                                 <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
                                 <button class="btn-primary" type="submit">Reset</button>
                             </form>
-                            <form method="post">
+                            <form method="post" style="flex:1;">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="delete_workspace">
                                 <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
