@@ -35,7 +35,10 @@ class CliCommandExecutor:
         if not command:
             raise CliCommandError("Command cannot be empty.")
 
-        tokens = shlex.split(command)
+        try:
+            tokens = shlex.split(command)
+        except ValueError as exc:
+            raise CliCommandError(f"Invalid command syntax: {exc}") from exc
         if not tokens:
             raise CliCommandError("Command cannot be empty.")
 

@@ -24,12 +24,16 @@ def _build_workspace() -> Workspace:
     node_b.set_attribute("name", "Bob")
     graph.add_node(node_a)
     graph.add_node(node_b)
+    current_graph = graph.create_subgraph(
+        set(graph.nodes.keys()),
+        subgraph_id=graph.graph_id,
+    )
     return Workspace(
         workspace_id="ws-cli",
         source_plugin_id="test",
         source_parameters={},
         base_graph=graph,
-        current_graph=graph,
+        current_graph=current_graph,
     )
 
 
