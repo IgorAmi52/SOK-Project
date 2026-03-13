@@ -30,4 +30,11 @@ def create_plugin_registry() -> PluginRegistry:
     except ImportError:
         pass
 
+    try:
+        from block_visualizer import BlockVisualizerPlugin
+
+        registry.register_visualizer(BlockVisualizerPlugin())
+    except ImportError:
+        pass
+
     return registry
