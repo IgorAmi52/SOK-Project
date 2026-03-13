@@ -1,0 +1,328 @@
+<div class="block-visualizer-container" id="block-visualizer-{{ graph_id }}">
+    <svg class="block-visualizer-svg"></svg>
+</div>
+
+<script>
+(function() {
+    const containerId = "block-visualizer-{{ graph_id }}";
+    const container = document.getElementById(containerId);
+    const svg = d3.select("#" + containerId + " .block-visualizer-svg");
+
+    const nodes = {{ nodes_json | safe }};
+    const links = {{ edges_json | safe }};
+    let currentSelectedNodeId = {{ selected_node_id_json | safe }};
+    let pendingFocusNodeId = null;
+    let hasAutoFitRun = false;
+
+    let width = 900;
+    let height = 650;
+    applyViewportSize();
+
+    svg.append("defs").append("marker")
+        .attr("id", "arrowhead-" + containerId)
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 26)
+        .attr("refY", 0)
+        .attr("markerWidth", 6)
+        .attr("markerHeight", 6)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5")
+        .attr("fill", "#7d8b99");
+
+    const g = svg.append("g").attr("class", "graph-content");
+
+    const zoom = d3.zoom()
+        .scaleExtent([0.1, 4])
+        .on("zoom", (event) => {
+            g.attr("transform", event.transform);
+            container.dispatchEvent(new CustomEvent("visualizer:zoom", {
+                detail: { transform: event.transform },
+                bubbles: true
+            }));
+        });
+
+    svg.call(zoom);
+
+    initializeNodeCoordinates();
+
+    const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(170))
+        .force("charge", d3.forceManyBody().strength(-800))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collision", d3.forceCollide().radius(d => (d.width / 2) + 18));
+
+    const link = g.append("g")
+        .attr("class", "links")
+        .selectAll("line")
+        .data(links)
+        .enter()
+        .append("line")
+        .attr("stroke", "#7d8b99")
+        .attr("stroke-width", 1.4)
+        .attr("marker-end", d => d.directed ? "url(#arrowhead-" + containerId + ")" : null);
+
+    const node = g.append("g")
+        .attr("class", "nodes")
+        .selectAll("g")
+        .data(nodes)
+        .enter()
+        .append("g")
+        .attr("class", "block-node")
+        .attr("data-node-id", d => d.id)
+        .call(d3.drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended));
+
+    node.append("rect")
+        .attr("x", d => -(d.width / 2))
+        .attr("y", d => -(d.height / 2))
+        .attr("width", d => d.width)
+        .attr("height", d => d.height)
+        .attr("rx", 8)
+        .attr("fill", "#1f2937")
+        .attr("stroke", "#334155")
+        .attr("stroke-width", 2);
+
+    node.append("line")
+        .attr("x1", d => -(d.width / 2))
+        .attr("x2", d => d.width / 2)
+        .attr("y1", d => -(d.height / 2) + 22)
+        .attr("y2", d => -(d.height / 2) + 22)
+        .attr("stroke", "#334155")
+        .attr("stroke-width", 1);
+
+    node.append("text")
+        .attr("x", d => -(d.width / 2) + 8)
+        .attr("y", d => -(d.height / 2) + 15)
+        .attr("fill", "#e2e8f0")
+        .attr("font-size", "11px")
+        .attr("font-weight", "600")
+        .text(d => d.title.length > 24 ? d.title.substring(0, 24) + "..." : d.title);
+
+    node.selectAll(".attr-row")
+        .data(d => d.rows.map((row, index) => ({ row, index, width: d.width, height: d.height })))
+        .enter()
+        .append("text")
+        .attr("class", "attr-row")
+        .attr("x", d => -(d.width / 2) + 8)
+        .attr("y", d => -(d.height / 2) + 37 + (d.index * 14))
+        .attr("fill", "#94a3b8")
+        .attr("font-size", "10px")
+        .text(d => d.row.length > 28 ? d.row.substring(0, 28) + "..." : d.row);
+
+    node.on("mouseover", function(event, d) {
+        const tooltip = document.createElement("div");
+        tooltip.className = "block-visualizer-tooltip";
+        const attrs = Object.entries(d.attributes || {})
+            .map(([k, v]) => k + ": " + v)
+            .join("<br>");
+        tooltip.innerHTML = "<strong>" + d.title + "</strong><br>ID: " + d.id +
+            (attrs ? "<hr style='border-color:#475569'>" + attrs : "");
+        tooltip.style.cssText = "position:absolute;background:#111827;color:#e5e7eb;padding:8px;border-radius:4px;font-size:12px;pointer-events:none;z-index:1000;border:1px solid #334155;max-width:320px;";
+        tooltip.style.left = (event.pageX + 10) + "px";
+        tooltip.style.top = (event.pageY - 10) + "px";
+        tooltip.id = "tooltip-" + containerId;
+        document.body.appendChild(tooltip);
+    }).on("mouseout", function() {
+        const tooltip = document.getElementById("tooltip-" + containerId);
+        if (tooltip) tooltip.remove();
+    }).on("click", function(event, d) {
+        applySelection(d.id);
+        container.dispatchEvent(new CustomEvent("visualizer:select", {
+            detail: { nodeId: d.id, node: d },
+            bubbles: true
+        }));
+    });
+
+    simulation.on("tick", () => {
+        link
+            .attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y);
+
+        node.attr("transform", d => "translate(" + d.x + "," + d.y + ")");
+
+        if (pendingFocusNodeId) {
+            const nodeId = pendingFocusNodeId;
+            pendingFocusNodeId = null;
+            focusNode(nodeId);
+        }
+    });
+    simulation.on("end", () => {
+        if (hasAutoFitRun || nodes.length === 0) {
+            return;
+        }
+        hasAutoFitRun = true;
+        fitGraphInView();
+    });
+
+    function applySelection(nodeId) {
+        currentSelectedNodeId = nodeId || null;
+        node.select("rect")
+            .attr("fill", d => d.id === currentSelectedNodeId ? "#0f172a" : "#1f2937")
+            .attr("stroke", d => d.id === currentSelectedNodeId ? "#38bdf8" : "#334155")
+            .attr("stroke-width", d => d.id === currentSelectedNodeId ? 3 : 2);
+    }
+
+    function focusNode(nodeId, zoomScale = 1.4) {
+        applySelection(nodeId);
+
+        if (!nodeId) {
+            return;
+        }
+
+        const targetNode = nodes.find(d => d.id === nodeId);
+        if (!targetNode) {
+            return;
+        }
+
+        if (typeof targetNode.x !== "number" || typeof targetNode.y !== "number") {
+            pendingFocusNodeId = nodeId;
+            return;
+        }
+
+        const targetTransform = d3.zoomIdentity
+            .translate((width / 2) - (zoomScale * targetNode.x), (height / 2) - (zoomScale * targetNode.y))
+            .scale(zoomScale);
+
+        svg.transition().duration(400).call(zoom.transform, targetTransform);
+    }
+
+    function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+    }
+
+    function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+
+    function applyViewportSize() {
+        const rect = container.getBoundingClientRect();
+        const parentRect = container.parentElement
+            ? container.parentElement.getBoundingClientRect()
+            : { width: 0, height: 0 };
+        width = Math.max(
+            320,
+            Math.floor(rect.width || container.clientWidth || parentRect.width || 900)
+        );
+        height = Math.max(
+            280,
+            Math.floor(rect.height || container.clientHeight || parentRect.height || 650)
+        );
+        svg.attr("width", width).attr("height", height);
+    }
+
+    function initializeNodeCoordinates() {
+        const spread = 90;
+        nodes.forEach((nodeDatum, index) => {
+            if (typeof nodeDatum.x !== "number") {
+                nodeDatum.x = (width / 2) + ((index % 5) - 2) * spread;
+            }
+            if (typeof nodeDatum.y !== "number") {
+                nodeDatum.y = (height / 2) + (Math.floor(index / 5) - 2) * spread;
+            }
+        });
+    }
+
+    function fitGraphInView() {
+        if (!nodes.length) {
+            return;
+        }
+
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        for (const nodeDatum of nodes) {
+            const halfW = (nodeDatum.width || 180) / 2;
+            const halfH = (nodeDatum.height || 80) / 2;
+            minX = Math.min(minX, nodeDatum.x - halfW);
+            minY = Math.min(minY, nodeDatum.y - halfH);
+            maxX = Math.max(maxX, nodeDatum.x + halfW);
+            maxY = Math.max(maxY, nodeDatum.y + halfH);
+        }
+
+        const graphWidth = Math.max(1, maxX - minX);
+        const graphHeight = Math.max(1, maxY - minY);
+        const margin = 24;
+        const scaleX = (width - margin * 2) / graphWidth;
+        const scaleY = (height - margin * 2) / graphHeight;
+        const scale = Math.max(0.2, Math.min(2.5, Math.min(scaleX, scaleY)));
+        const tx = (width / 2) - (scale * (minX + graphWidth / 2));
+        const ty = (height / 2) - (scale * (minY + graphHeight / 2));
+
+        svg.transition().duration(350).call(
+            zoom.transform,
+            d3.zoomIdentity.translate(tx, ty).scale(scale)
+        );
+    }
+
+    container.zoomIn = () => svg.transition().call(zoom.scaleBy, 1.25);
+    container.zoomOut = () => svg.transition().call(zoom.scaleBy, 0.8);
+    container.resetZoom = () => fitGraphInView();
+    container.selectNode = (nodeId) => applySelection(nodeId);
+    container.focusNode = (nodeId) => focusNode(nodeId);
+    container.addEventListener("workspace:select-node", function(event) {
+        if (!event.detail || !event.detail.nodeId) {
+            return;
+        }
+        focusNode(event.detail.nodeId);
+    });
+
+    let resizeTimer = null;
+    function onResize() {
+        if (resizeTimer) {
+            clearTimeout(resizeTimer);
+        }
+        resizeTimer = setTimeout(() => {
+            const previousWidth = width;
+            const previousHeight = height;
+            const currentTransform = d3.zoomTransform(svg.node());
+
+            applyViewportSize();
+            if (width === previousWidth && height === previousHeight) {
+                return;
+            }
+
+            simulation.force("center", d3.forceCenter(width / 2, height / 2));
+            simulation.alpha(0.12).restart();
+
+            const adjustedTransform = d3.zoomIdentity
+                .translate(
+                    currentTransform.x + ((width - previousWidth) / 2),
+                    currentTransform.y + ((height - previousHeight) / 2)
+                )
+                .scale(currentTransform.k);
+            svg.call(zoom.transform, adjustedTransform);
+        }, 120);
+    }
+    window.addEventListener("resize", onResize);
+    container.addEventListener("workspace:resize", onResize);
+
+    requestAnimationFrame(() => {
+        applyViewportSize();
+        simulation.force("center", d3.forceCenter(width / 2, height / 2));
+        simulation.alpha(0.2).restart();
+        setTimeout(() => {
+            if (!hasAutoFitRun) {
+                hasAutoFitRun = true;
+                fitGraphInView();
+            }
+        }, 450);
+    });
+
+    applySelection(currentSelectedNodeId);
+})();
+</script>

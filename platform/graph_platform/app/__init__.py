@@ -25,8 +25,22 @@ def create_plugin_registry() -> PluginRegistry:
         pass
 
     try:
+        from yaml_data_source.plugin import YamlDataSourcePlugin
+
+        registry.register_data_source(YamlDataSourcePlugin())
+    except ImportError:
+        pass
+
+    try:
         from simple_visualizer import SimpleVisualizerPlugin
         registry.register_visualizer(SimpleVisualizerPlugin())
+    except ImportError:
+        pass
+
+    try:
+        from block_visualizer import BlockVisualizerPlugin
+
+        registry.register_visualizer(BlockVisualizerPlugin())
     except ImportError:
         pass
 

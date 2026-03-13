@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     from graph_platform.core.workspace import Workspace, WorkspaceManager
     from graph_platform.core.workspace_service import WorkspaceService
 
-
 _WORKSPACE_MANAGER: WorkspaceManager | None = None
 _WORKSPACE_SERVICE: WorkspaceService | None = None
 _CLI_EXECUTOR: CliCommandExecutor | None = None
@@ -80,9 +79,12 @@ def _get_cli_executor() -> CliCommandExecutor | None:
 def home(request: HttpRequest) -> HttpResponse:
     data_sources: list[dict[str, str]] = []
     visualizers: list[dict[str, str]] = []
+    workspace_items: list[dict[str, object]] = []
     integration_message = "Platform package is not installed yet."
 
     registry = _get_registry()
+    workspace_manager = _get_workspace_manager()
+
     if registry:
         data_sources = [
             {"id": plugin.plugin_id, "name": plugin.display_name}
@@ -94,6 +96,10 @@ def home(request: HttpRequest) -> HttpResponse:
         ]
         integration_message = "Platform registry loaded successfully."
 
+    if workspace_manager is not None:
+        _cleanup_workspace_order(workspace_manager)
+        workspace_items = _build_workspace_items(workspace_manager, active_workspace_id="")
+
     return render(
         request,
         "main/home.html",
@@ -101,6 +107,7 @@ def home(request: HttpRequest) -> HttpResponse:
             "integration_message": integration_message,
             "data_sources": data_sources,
             "visualizers": visualizers,
+            "workspace_items": workspace_items,
         },
     )
 
@@ -158,6 +165,100 @@ def api_cli(request: HttpRequest) -> HttpResponse:
     except CliCommandError as exc:
         _append_cli_entry(metadata, command=command_text, output=f"ERROR: {exc}")
         return JsonResponse({"error": str(exc)}, status=400)
+
+
+@csrf_exempt
+def api_workspace(request: HttpRequest) -> HttpResponse:
+    registry = _get_registry()
+    workspace_manager = _get_workspace_manager()
+
+    if not registry or workspace_manager is None:
+        return JsonResponse({"error": "Platform is not installed."}, status=500)
+
+    if request.method == "GET":
+        _cleanup_workspace_order(workspace_manager)
+        return JsonResponse({"workspaces": _build_workspace_items(workspace_manager, active_workspace_id="")})
+
+    if request.method == "POST":
+        try:
+            payload = _parse_request_payload(request)
+        except ValueError as exc:
+            return JsonResponse({"error": str(exc)}, status=400)
+
+        created_id, error_message = _create_workspace_from_params(
+            registry=registry,
+            workspace_manager=workspace_manager,
+            parameter_values=payload,
+            uploaded_source=request.FILES.get("source_file"),
+        )
+        if error_message:
+            return JsonResponse({"error": error_message}, status=400)
+        if not created_id:
+            return JsonResponse({"error": "Failed to create workspace."}, status=400)
+
+        workspace_state = workspace_manager.get(created_id)
+        metadata = _ensure_workspace_meta(created_id)
+        return JsonResponse(
+            {
+                "workspace_id": created_id,
+                "workspace": _serialize_workspace_detail(workspace_state, metadata),
+            }
+        )
+
+    return HttpResponseNotAllowed(["GET", "POST"])
+
+
+@csrf_exempt
+def api_workspace_detail(request: HttpRequest, workspace_id: str) -> HttpResponse:
+    workspace_manager = _get_workspace_manager()
+    workspace_service = _get_workspace_service()
+
+    if workspace_manager is None or workspace_service is None:
+        return JsonResponse({"error": "Platform is not installed."}, status=500)
+
+    if not workspace_manager.has(workspace_id):
+        return JsonResponse({"error": f"Workspace '{workspace_id}' not found."}, status=404)
+
+    workspace_state = workspace_manager.get(workspace_id)
+    metadata = _ensure_workspace_meta(workspace_id)
+
+    if request.method == "GET":
+        return JsonResponse({"workspace": _serialize_workspace_detail(workspace_state, metadata)})
+
+    if request.method in {"PUT", "PATCH"}:
+        try:
+            payload = _parse_request_payload(request)
+        except ValueError as exc:
+            return JsonResponse({"error": str(exc)}, status=400)
+
+        if "name" in payload:
+            metadata["name"] = str(payload.get("name") or "").strip() or metadata.get("name", workspace_id)
+        if "visualizer_id" in payload:
+            metadata["visualizer_id"] = str(payload.get("visualizer_id") or metadata.get("visualizer_id"))
+        return JsonResponse({"workspace": _serialize_workspace_detail(workspace_state, metadata)})
+
+    if request.method == "DELETE":
+        workspace_manager.remove(workspace_id)
+        _WORKSPACE_META.pop(workspace_id, None)
+        _WORKSPACE_ORDER[:] = [item for item in _WORKSPACE_ORDER if item != workspace_id]
+        return JsonResponse({"deleted": True})
+
+    if request.method == "POST":
+        try:
+            payload = _parse_request_payload(request)
+        except ValueError as exc:
+            return JsonResponse({"error": str(exc)}, status=400)
+
+        action = str(payload.get("action", "")).strip().lower()
+        if action != "reset":
+            return JsonResponse({"error": "Unsupported action."}, status=400)
+
+        workspace_service.reset_graph(workspace_state)
+        metadata["search_query"] = ""
+        metadata["filter_query"] = ""
+        return JsonResponse({"workspace": _serialize_workspace_detail(workspace_state, metadata)})
+
+    return HttpResponseNotAllowed(["GET", "PUT", "PATCH", "DELETE", "POST"])
 
 
 def workspace(request: HttpRequest) -> HttpResponse:
@@ -460,7 +561,7 @@ def _create_workspace_from_params(
 
     workspace_name = parameter_values.get("workspace_name", "").strip()
     if not workspace_name:
-        workspace_name = f"{data_source.display_name} ({base_graph.graph_id})"
+        workspace_name = _build_default_workspace_name(data_source.display_name)
 
     _WORKSPACE_META[workspace_id] = {
         "name": workspace_name,
@@ -471,6 +572,23 @@ def _create_workspace_from_params(
         "cli_output": [],
     }
     return workspace_id, None
+
+
+def _build_default_workspace_name(base_name: str) -> str:
+    normalized_base = base_name.strip() or "Workspace"
+    existing_names = {
+        str(meta.get("name", "")).strip().lower()
+        for meta in _WORKSPACE_META.values()
+    }
+    if normalized_base.lower() not in existing_names:
+        return normalized_base
+
+    suffix = 2
+    while True:
+        candidate = f"{normalized_base} {suffix}"
+        if candidate.lower() not in existing_names:
+            return candidate
+        suffix += 1
 
 
 def _cleanup_workspace_order(workspace_manager: WorkspaceManager) -> None:
@@ -594,6 +712,22 @@ def _parse_request_payload(request: HttpRequest) -> dict[str, str]:
             raise ValueError("JSON payload must be an object.")
         return {str(key): "" if value is None else str(value) for key, value in payload.items()}
     return {str(key): str(value) for key, value in request.POST.items()}
+
+
+def _serialize_workspace_detail(workspace_state, metadata: dict[str, object]) -> dict[str, object]:
+    graph = workspace_state.current_graph
+    return {
+        "id": workspace_state.workspace_id,
+        "name": str(metadata.get("name", workspace_state.workspace_id)),
+        "source_plugin_id": workspace_state.source_plugin_id,
+        "source_parameters": dict(workspace_state.source_parameters),
+        "visualizer_id": str(metadata.get("visualizer_id", "simple-visualizer")),
+        "search_query": str(metadata.get("search_query", "")),
+        "filter_query": str(metadata.get("filter_query", "")),
+        "node_count": len(graph.nodes),
+        "edge_count": len(graph.edges),
+        "graph_id": graph.graph_id,
+    }
 
 
 def _persist_uploaded_source_file(uploaded_file) -> str:
