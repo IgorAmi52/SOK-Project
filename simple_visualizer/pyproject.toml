@@ -12,6 +12,9 @@ dependencies = [
     "jinja2>=3.0"
 ]
 
+[project.entry-points."graph_platform.visualizer_plugins"]
+simple = "simple_visualizer.plugin:SimpleVisualizerPlugin"
+
 [tool.setuptools]
 packages = ["simple_visualizer"]
 

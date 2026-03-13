@@ -12,5 +12,8 @@ dependencies = [
     "PyYAML",
 ]
 
+[project.entry-points."graph_platform.data_source_plugins"]
+yaml = "yaml_data_source.plugin:YamlDataSourcePlugin"
+
 [tool.setuptools]
 packages = ["yaml_data_source"]

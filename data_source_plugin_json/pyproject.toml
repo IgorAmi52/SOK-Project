@@ -11,6 +11,9 @@ dependencies = [
     "graph-api"
 ]
 
+[project.entry-points."graph_platform.data_source_plugins"]
+json = "data_source_plugin_json.plugin:JsonDataSourcePlugin"
+
 [tool.setuptools]
 packages = ["data_source_plugin_json"]
 
