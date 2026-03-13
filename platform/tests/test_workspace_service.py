@@ -1,6 +1,6 @@
 from __future__ import annotations
 from graph_platform.core.workspace_service import WorkspaceService
-from graph_platform.core.workspace import Workspace
+from graph_platform.core.workspace import Workspace, WorkspaceManager
 from graph_platform.core.errors import QueryValidationError
 from graph_api.model.node import Node
 from graph_api.model.graph import Graph
@@ -53,12 +53,16 @@ def build_sample_graph() -> Graph:
 class WorkspaceServiceTests(unittest.TestCase):
     def setUp(self) -> None:
         self.base_graph = build_sample_graph()
+        current_graph = self.base_graph.create_subgraph(
+            set(self.base_graph.nodes.keys()),
+            subgraph_id=self.base_graph.graph_id,
+        )
         self.workspace = Workspace(
             workspace_id="ws-1",
             source_plugin_id="test-plugin",
             source_parameters={},
             base_graph=self.base_graph,
-            current_graph=self.base_graph,
+            current_graph=current_graph,
         )
         self.service = WorkspaceService()
 
@@ -95,11 +99,44 @@ class WorkspaceServiceTests(unittest.TestCase):
 
         result = self.service.reset_graph(self.workspace)
 
-        self.assertIs(result, self.base_graph)
+        self.assertIsNot(result, self.base_graph)
         self.assertEqual(set(self.workspace.current_graph.nodes.keys()), {
                          "n1", "n2", "n3"})
         self.assertEqual(self.workspace.applied_filters, [])
         self.assertEqual(self.workspace.applied_searches, [])
+
+    def test_reset_restores_graph_after_manual_mutation(self) -> None:
+        self.workspace.current_graph.remove_edge("e1")
+        self.workspace.current_graph.remove_edge("e2")
+        self.workspace.current_graph.remove_node("n2")
+        self.assertNotIn("n2", self.workspace.current_graph.nodes)
+        self.assertIn("n2", self.workspace.base_graph.nodes)
+
+        result = self.service.reset_graph(self.workspace)
+
+        self.assertIn("n2", result.nodes)
+        self.assertIn("e1", result.edges)
+        self.assertIn("e2", result.edges)
+
+
+class WorkspaceManagerTests(unittest.TestCase):
+    def test_remove_and_has(self) -> None:
+        manager = WorkspaceManager()
+        graph = build_sample_graph()
+        workspace = Workspace(
+            workspace_id="ws-remove",
+            source_plugin_id="test-plugin",
+            source_parameters={},
+            base_graph=graph,
+            current_graph=graph,
+        )
+
+        manager.add(workspace)
+        self.assertTrue(manager.has("ws-remove"))
+
+        removed = manager.remove("ws-remove")
+        self.assertIsNotNone(removed)
+        self.assertFalse(manager.has("ws-remove"))
 
 
 if __name__ == "__main__":
