@@ -1,4 +1,3 @@
-{% load static %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -626,7 +625,6 @@
 </head>
 <body>
     <form id="visualizer-form" method="post" style="display:none;">
-        {% csrf_token %}
         <input type="hidden" name="action" value="set_visualizer">
         <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
         <input type="hidden" name="visualizer" id="visualizer-input">
@@ -641,11 +639,11 @@
                         <option value="{{ vis.id }}" {% if vis.id == current_visualizer %}selected{% endif %}>
                             {{ vis.name }}
                         </option>
-                    {% empty %}
+                    {% else %}
                         <option value="">No visualizers available</option>
                     {% endfor %}
                 </select>
-                <button id="btn-back" type="button" data-home-url="{% url 'home' %}">Back to Home</button>
+                <button id="btn-back" type="button" data-home-url="{{ url_for('home') }}">Back to Home</button>
             </div>
         </header>
 
@@ -656,7 +654,6 @@
                     <div class="workspace-list">
                         {% for workspace in workspace_items %}
                             <form class="workspace-row" method="post">
-                                {% csrf_token %}
                                 <input type="hidden" name="action" value="switch_workspace">
                                 <input type="hidden" name="target_workspace_id" value="{{ workspace.id }}">
                                 <button
@@ -667,20 +664,18 @@
                                     <span class="workspace-btn-meta">Nodes: {{ workspace.node_count }} | Edges: {{ workspace.edge_count }}</span>
                                 </button>
                             </form>
-                        {% empty %}
+                        {% else %}
                             <p class="workspace-empty">No workspaces loaded. Load graph from Home.</p>
                         {% endfor %}
                     </div>
                     {% if active_workspace_id %}
                         <div class="action-buttons">
-                            <form method="post" style="flex:1;">
-                                {% csrf_token %}
+                            <form method="post">
                                 <input type="hidden" name="action" value="reset_workspace">
                                 <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
                                 <button class="btn-primary" type="submit">Reset</button>
                             </form>
-                            <form method="post" style="flex:1;">
-                                {% csrf_token %}
+                            <form method="post">
                                 <input type="hidden" name="action" value="delete_workspace">
                                 <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
                                 <button class="btn-secondary" type="submit">Delete</button>
@@ -692,10 +687,9 @@
                 <div class="sidebar-section">
                     <h3>Search</h3>
                     <form method="post">
-                        {% csrf_token %}
                         <input type="hidden" name="action" value="search">
                         <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
-                        <input type="text" class="search-box" id="search-input" name="search_query" placeholder="Search nodes..." value="{{ search_query|default:'' }}" {% if not active_workspace_id %}disabled{% endif %}>
+                        <input type="text" class="search-box" id="search-input" name="search_query" placeholder="Search nodes..." value="{{ search_query or '' }}" {% if not active_workspace_id %}disabled{% endif %}>
                         <div class="action-buttons">
                             <button class="btn-primary" id="btn-search" type="submit" {% if not active_workspace_id %}disabled{% endif %}>Search</button>
                             <button class="btn-secondary" id="btn-clear-search" type="button">Clear</button>
@@ -706,10 +700,9 @@
                 <div class="sidebar-section">
                     <h3>Filter</h3>
                     <form method="post">
-                        {% csrf_token %}
                         <input type="hidden" name="action" value="filter">
                         <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
-                        <input type="text" class="filter-box" id="filter-input" name="filter_query" placeholder="e.g. age > 25" value="{{ filter_query|default:'' }}" {% if not active_workspace_id %}disabled{% endif %}>
+                        <input type="text" class="filter-box" id="filter-input" name="filter_query" placeholder="e.g. age > 25" value="{{ filter_query or '' }}" {% if not active_workspace_id %}disabled{% endif %}>
                         <p class="filter-hint">Format: attribute operator value</p>
                         <div class="action-buttons">
                             <button class="btn-primary" id="btn-filter" type="submit" {% if not active_workspace_id %}disabled{% endif %}>Apply</button>
@@ -785,13 +778,12 @@
                                 <span class="cmd">&gt; {{ entry.command }}</span><br>
                                 <span class="cli-line-output">{{ entry.output }}</span>
                             </div>
-                        {% empty %}
+                        {% else %}
                             <div class="cli-line">No commands yet. Type <span class="cmd">help</span>.</div>
                         {% endfor %}
                     </div>
                     <div class="cli-input-wrap">
                         <form method="post" id="cli-form">
-                            {% csrf_token %}
                             <input type="hidden" name="action" value="execute_cli">
                             <input type="hidden" name="workspace_id" value="{{ active_workspace_id }}">
                             <input
@@ -809,15 +801,15 @@
         </div>
 
         <footer class="status-bar">
-            <span id="status-nodes">Nodes: {{ node_count|default:0 }}</span>
-            <span id="status-edges">Edges: {{ edge_count|default:0 }}</span>
+            <span id="status-nodes">Nodes: {{ node_count or 0 }}</span>
+            <span id="status-edges">Edges: {{ edge_count or 0 }}</span>
             <span id="status-zoom">Zoom: 100%</span>
         </footer>
     </div>
 
-    {{ tree_graph|json_script:"tree-graph-data" }}
-    {{ cli_history|json_script:"cli-history-data" }}
-    <script src="{% static 'main/js/tree_view.js' %}"></script>
+    <script id="tree-graph-data" type="application/json">{{ tree_graph | tojson }}</script>
+    <script id="cli-history-data" type="application/json">{{ cli_history | tojson }}</script>
+    <script src="{{ url_for('static', filename='platform_django/js/tree_view.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const mainView = document.getElementById('main-view');

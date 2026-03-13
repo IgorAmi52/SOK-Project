@@ -5,14 +5,14 @@ import unittest
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-for package_dir in ("api", "platform", "graph_explorer"):
+for package_dir in ("api", "platform"):
     resolved = PROJECT_ROOT / package_dir
     if str(resolved) not in sys.path:
         sys.path.insert(0, str(resolved))
 
 from graph_api.model.graph import Graph
 from graph_platform.core.workspace import Workspace, WorkspaceManager
-from main import views
+from graph_platform.django_app import views
 
 
 def _build_workspace(workspace_id: str, source_plugin_id: str) -> Workspace:

@@ -102,7 +102,7 @@ def home(request: HttpRequest) -> HttpResponse:
 
     return render(
         request,
-        "main/home.html",
+        "platform_django/home.html",
         {
             "integration_message": integration_message,
             "data_sources": data_sources,
@@ -288,7 +288,7 @@ def workspace(request: HttpRequest) -> HttpResponse:
     if not registry or workspace_manager is None or workspace_service is None:
         return render(
             request,
-            "main/workspace.html",
+            "platform_django/workspace.html",
             {
                 "error_message": "Platform is not installed.",
                 "visualizers": [],
@@ -486,7 +486,7 @@ def workspace(request: HttpRequest) -> HttpResponse:
 
     return render(
         request,
-        "main/workspace.html",
+        "platform_django/workspace.html",
         {
             "graph_html": graph_html,
             "error_message": error_message,

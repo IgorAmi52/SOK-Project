@@ -13,3 +13,10 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["."]
+
+[tool.setuptools.package-data]
+graph_platform = [
+    "django_app/templates/platform_django/*.html",
+    "django_app/static/platform_django/js/*.js",
+    "flask_app/templates/platform_flask/*.html",
+]
