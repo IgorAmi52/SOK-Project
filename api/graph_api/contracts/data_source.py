@@ -11,6 +11,7 @@ class PluginParameter:
     name: str
     description: str
     required: bool = True
+    choices: tuple[str, ...] = ()
 
 
 class DataSourcePlugin(ABC):

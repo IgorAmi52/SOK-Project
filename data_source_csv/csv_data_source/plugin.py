@@ -31,6 +31,7 @@ class CsvDataSourcePlugin(DataSourcePlugin):
                 name="format",
                 description="CSV graph format: edge_list, adjacency_list, matrix.",
                 required=True,
+                choices=("edge_list", "adjacency_list", "matrix"),
             ),
             PluginParameter(
                 name="delimiter",

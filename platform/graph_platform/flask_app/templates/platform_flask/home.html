@@ -138,6 +138,14 @@
             flex: 1 1 420px;
         }
 
+        .load-form-main {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            flex: 1 1 100%;
+        }
+
         .load-form button {
             margin-left: auto;
         }
@@ -159,6 +167,71 @@
 
         .load-form input[type="file"] {
             max-width: 250px;
+        }
+
+        .advanced-options {
+            width: auto;
+            flex: 0 1 auto;
+            border: none;
+            background: transparent;
+            color: var(--text);
+            overflow: visible;
+        }
+
+        .advanced-options summary {
+            cursor: pointer;
+            list-style: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 35px;
+            padding: 7px 12px;
+            border: 1px solid #2a4b77;
+            border-radius: 999px;
+            background: #101933;
+            color: var(--muted);
+            font-size: 0.88rem;
+            user-select: none;
+        }
+
+        .advanced-options summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .advanced-options summary::after {
+            content: "+";
+            color: var(--accent);
+            font-size: 1rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .advanced-options[open] summary {
+            border-color: #3b6da7;
+            background: #13203d;
+            color: var(--text);
+        }
+
+        .advanced-options[open] summary::after {
+            content: "-";
+        }
+
+        .advanced-fields {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 10px;
+            margin-top: 8px;
+            width: min(320px, calc(100vw - 64px));
+            border: 1px solid #2a4b77;
+            border-radius: 10px;
+            background: #101933;
+            box-shadow: 0 18px 32px rgba(3, 10, 24, 0.42);
+        }
+
+        .advanced-fields input,
+        .advanced-fields select {
+            width: 100%;
         }
 
         .load-form button {
@@ -220,9 +293,18 @@
                 width: 100%;
             }
 
+            .load-form-main {
+                width: 100%;
+            }
+
             .load-form input,
             .load-form select,
-            .load-form button {
+            .load-form button,
+            .advanced-options {
+                width: 100%;
+            }
+
+            .advanced-fields {
                 width: 100%;
             }
         }
@@ -271,15 +353,63 @@
                         <form class="load-form" action="{{ url_for('workspace') }}" method="post" enctype="multipart/form-data">
                             <input type="hidden" name="action" value="create_workspace">
                             <input type="hidden" name="data_source" value="{{ plugin.id }}">
-                            <input type="text" name="workspace_name" placeholder="Workspace name (optional)">
-                            <input type="file" name="source_file" title="Choose file from your computer">
-                            <input type="text" name="file_path" placeholder="Or enter server path...">
-                            {% if plugin.id == "csv_data_source" %}
-                                <select name="format" title="CSV format (used by CSV plugin)">
-                                    <option value="edge_list">edge_list</option>
-                                    <option value="adjacency_list">adjacency_list</option>
-                                    <option value="matrix">matrix</option>
-                                </select>
+                            <div class="load-form-main">
+                                <input type="text" name="workspace_name" placeholder="Workspace name (optional)">
+                                {% for parameter in plugin.required_parameters %}
+                                    {% if parameter.is_file_path %}
+                                        <input type="file" name="source_file" title="{{ parameter.description }}">
+                                        <input
+                                            type="text"
+                                            name="{{ parameter.name }}"
+                                            placeholder="Or enter server path..."
+                                            title="{{ parameter.description }}"
+                                        >
+                                    {% elif parameter.choices %}
+                                        <select
+                                            name="{{ parameter.name }}"
+                                            title="{{ parameter.description }}"
+                                            {% if parameter.required %}required{% endif %}
+                                        >
+                                            {% for choice in parameter.choices %}
+                                                <option value="{{ choice }}">{{ choice }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    {% else %}
+                                        <input
+                                            type="text"
+                                            name="{{ parameter.name }}"
+                                            placeholder="{{ parameter.label }}"
+                                            title="{{ parameter.description }}"
+                                            {% if parameter.required %}required{% endif %}
+                                        >
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% if plugin.has_optional_parameters %}
+                                <details class="advanced-options">
+                                    <summary>Advanced options</summary>
+                                    <div class="advanced-fields">
+                                        {% for parameter in plugin.optional_parameters %}
+                                            {% if parameter.choices %}
+                                                <select
+                                                    name="{{ parameter.name }}"
+                                                    title="{{ parameter.description }}"
+                                                >
+                                                    {% for choice in parameter.choices %}
+                                                        <option value="{{ choice }}">{{ choice }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            {% else %}
+                                                <input
+                                                    type="text"
+                                                    name="{{ parameter.name }}"
+                                                    placeholder="{{ parameter.label }} (optional)"
+                                                    title="{{ parameter.description }}"
+                                                >
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </details>
                             {% endif %}
                             <button type="submit">Load</button>
                         </form>

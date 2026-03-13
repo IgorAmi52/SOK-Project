@@ -95,7 +95,7 @@ def _get_cli_executor() -> CliCommandExecutor | None:
 
 @app.route("/")
 def home() -> str:
-    data_sources: list[dict[str, str]] = []
+    data_sources: list[dict[str, object]] = []
     visualizers: list[dict[str, str]] = []
     workspace_items: list[dict[str, object]] = []
     integration_message = "Platform package is not installed yet."
@@ -104,14 +104,10 @@ def home() -> str:
     workspace_manager = _get_workspace_manager()
 
     if registry:
-        data_sources = [
-            {"id": plugin.plugin_id, "name": plugin.display_name}
-            for plugin in registry.list_data_sources()
-        ]
-        visualizers = [
-            {"id": plugin.plugin_id, "name": plugin.display_name}
-            for plugin in registry.list_visualizers()
-        ]
+        from graph_platform.app import describe_data_sources, describe_visualizers
+
+        data_sources = describe_data_sources(registry)
+        visualizers = describe_visualizers(registry)
         integration_message = "Platform registry loaded successfully."
 
     if workspace_manager is not None:
@@ -168,10 +164,9 @@ def workspace() -> str:
             cli_entries=cli_entries,
         )
 
-    visualizers = [
-        {"id": plugin.plugin_id, "name": plugin.display_name}
-        for plugin in registry.list_visualizers()
-    ]
+    from graph_platform.app import describe_visualizers
+
+    visualizers = describe_visualizers(registry)
 
     _cleanup_workspace_order(workspace_manager)
 
