@@ -4,7 +4,9 @@
     "platform",
     "data_source_csv",
     "data_source_plugin_json",
+    "data_source_yaml",
     "block_visualizer",
+    "simple_visualizer",
     "graph_explorer"
   ],
   "executionEnvironments": [
@@ -15,7 +17,9 @@
         "platform",
         "data_source_csv",
         "data_source_plugin_json",
-        "block_visualizer"
+        "data_source_yaml",
+        "block_visualizer",
+        "simple_visualizer"
       ]
     }
   ]

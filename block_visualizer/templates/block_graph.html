@@ -138,12 +138,38 @@
         }));
     });
 
+    function getNodeSize(node) {
+        return {
+            width: node.width || 180,
+            height: node.height || 80
+        };
+    }
+
+    function intersectNodeBoundary(fromNode, toNode, padding = 0) {
+        const dx = toNode.x - fromNode.x;
+        const dy = toNode.y - fromNode.y;
+        if (dx === 0 && dy === 0) {
+            return { x: fromNode.x, y: fromNode.y };
+        }
+
+        const { width, height } = getNodeSize(fromNode);
+        const halfW = (width / 2) + padding;
+        const halfH = (height / 2) + padding;
+        const tx = dx === 0 ? Number.POSITIVE_INFINITY : halfW / Math.abs(dx);
+        const ty = dy === 0 ? Number.POSITIVE_INFINITY : halfH / Math.abs(dy);
+        const t = Math.min(tx, ty);
+        return {
+            x: fromNode.x + (dx * t),
+            y: fromNode.y + (dy * t)
+        };
+    }
+
     simulation.on("tick", () => {
         link
-            .attr("x1", d => d.source.x)
-            .attr("y1", d => d.source.y)
-            .attr("x2", d => d.target.x)
-            .attr("y2", d => d.target.y);
+            .attr("x1", d => intersectNodeBoundary(d.source, d.target, 0).x)
+            .attr("y1", d => intersectNodeBoundary(d.source, d.target, 0).y)
+            .attr("x2", d => intersectNodeBoundary(d.target, d.source, d.directed ? 8 : 0).x)
+            .attr("y2", d => intersectNodeBoundary(d.target, d.source, d.directed ? 8 : 0).y);
 
         node.attr("transform", d => "translate(" + d.x + "," + d.y + ")");
 

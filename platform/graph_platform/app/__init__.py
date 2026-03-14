@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from importlib import metadata
-from typing import Callable
+from typing import Callable, TypeVar, cast
 
-from graph_api.contracts.data_source import PluginParameter
+from graph_api.contracts.data_source import DataSourcePlugin, PluginParameter
+from graph_api.contracts.visualizer import VisualizerPlugin
 from graph_platform.core.plugin_registry import PluginRegistry
 
 DATA_SOURCE_ENTRY_POINT_GROUP = "graph_platform.data_source_plugins"
@@ -87,16 +88,19 @@ def _register_entry_point_visualizers(registry: PluginRegistry) -> None:
     )
 
 
+PluginT = TypeVar("PluginT")
+
+
 def _register_entry_point_plugins(
     registry: PluginRegistry,
     group: str,
-    register: Callable[[object], None],
+    register: Callable[[PluginT], None],
 ) -> None:
     for entry_point in _select_entry_points(group):
         try:
             loaded = entry_point.load()
             plugin = loaded() if callable(loaded) else loaded
-            register(plugin)
+            register(cast(PluginT, plugin))
         except Exception:
             continue
 
@@ -105,7 +109,7 @@ def _select_entry_points(group: str) -> list[metadata.EntryPoint]:
     discovered = metadata.entry_points()
     if hasattr(discovered, "select"):
         return list(discovered.select(group=group))
-    return list(discovered.get(group, []))
+    return [ep for ep in discovered if getattr(ep, "group", None) == group]
 
 
 def _register_builtin_data_sources(registry: PluginRegistry) -> None:
@@ -147,8 +151,8 @@ def _register_builtin_visualizers(registry: PluginRegistry) -> None:
 def _register_builtin_plugin(
     registry: PluginRegistry,
     plugin_id: str,
-    register: Callable[[object], None],
-    factory: Callable[[], object],
+    register: Callable[[PluginT], None],
+    factory: Callable[[], PluginT],
 ) -> None:
     if _registry_contains_plugin(registry, plugin_id):
         return
@@ -165,31 +169,31 @@ def _registry_contains_plugin(registry: PluginRegistry, plugin_id: str) -> bool:
     )
 
 
-def _load_json_data_source() -> object:
+def _load_json_data_source() -> DataSourcePlugin:
     from data_source_plugin_json import JsonDataSourcePlugin
 
     return JsonDataSourcePlugin()
 
 
-def _load_csv_data_source() -> object:
+def _load_csv_data_source() -> DataSourcePlugin:
     from csv_data_source.plugin import CsvDataSourcePlugin
 
     return CsvDataSourcePlugin()
 
 
-def _load_yaml_data_source() -> object:
+def _load_yaml_data_source() -> DataSourcePlugin:
     from yaml_data_source.plugin import YamlDataSourcePlugin
 
     return YamlDataSourcePlugin()
 
 
-def _load_simple_visualizer() -> object:
+def _load_simple_visualizer() -> VisualizerPlugin:
     from simple_visualizer import SimpleVisualizerPlugin
 
     return SimpleVisualizerPlugin()
 
 
-def _load_block_visualizer() -> object:
+def _load_block_visualizer() -> VisualizerPlugin:
     from block_visualizer import BlockVisualizerPlugin
 
     return BlockVisualizerPlugin()

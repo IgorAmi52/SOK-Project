@@ -259,7 +259,6 @@ def api_workspace_detail(request: HttpRequest, workspace_id: str) -> HttpRespons
 
 def workspace(request: HttpRequest) -> HttpResponse:
     from graph_platform.core.errors import QueryValidationError
-    from graph_platform.core.workspace import Workspace
 
     registry = _get_registry()
     workspace_manager = _get_workspace_manager()
