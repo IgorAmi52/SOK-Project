@@ -18,10 +18,19 @@ from .strategies import (
 )
 
 
+# Pattern: Template Method — defines the skeleton of the CSV parsing algorithm; subclasses override individual steps
 class CsvParsingPipeline(ABC):
     """Template Method pipeline for converting CSV input into Graph."""
 
     def execute(self, parameter_values: dict[str, str]) -> Graph:
+        """Run the full pipeline: load, read, parse, build, validate.
+
+        Args:
+            parameter_values: Raw string parameters from the plugin caller.
+
+        Returns:
+            A fully constructed and validated Graph.
+        """
         config = self.load(parameter_values)
         csv_rows = self.read(config)
         parsed_graph = self.parse(csv_rows, config)
@@ -51,6 +60,10 @@ class CsvParsingPipeline(ABC):
 
 
 class DefaultCsvParsingPipeline(CsvParsingPipeline):
+    """Concrete pipeline that validates parameters, reads CSV rows, delegates
+    format-specific parsing to a strategy, and builds the Graph model.
+    """
+
     def __init__(self, strategies: list[CsvFormatStrategy] | None = None) -> None:
         resolved_strategies = strategies or [
             EdgeListCsvStrategy(),
@@ -62,6 +75,17 @@ class DefaultCsvParsingPipeline(CsvParsingPipeline):
         }
 
     def load(self, parameter_values: dict[str, str]) -> CsvLoadConfig:
+        """Validate raw parameters and resolve the file path.
+
+        Args:
+            parameter_values: Raw string parameters from the caller.
+
+        Returns:
+            A validated CsvLoadConfig.
+
+        Raises:
+            CsvParameterError: If required parameters are missing or invalid.
+        """
         file_path_raw = parameter_values.get("file_path", "").strip()
         if file_path_raw == "":
             raise CsvParameterError("Missing required parameter 'file_path'.")
@@ -95,6 +119,17 @@ class DefaultCsvParsingPipeline(CsvParsingPipeline):
         )
 
     def read(self, config: CsvLoadConfig) -> CsvRows:
+        """Read and normalise the CSV file into header names and row dicts.
+
+        Args:
+            config: Validated load configuration.
+
+        Returns:
+            A CsvRows instance containing field names and data rows.
+
+        Raises:
+            CsvParsingError: If the file has no header or no data rows.
+        """
         with config.file_path.open("r", encoding="utf-8-sig", newline="") as csv_file:
             reader = csv.DictReader(csv_file, delimiter=config.delimiter)
             if not reader.fieldnames:
@@ -120,10 +155,28 @@ class DefaultCsvParsingPipeline(CsvParsingPipeline):
         return CsvRows(fieldnames=fieldnames, rows=rows)
 
     def parse(self, csv_rows: CsvRows, config: CsvLoadConfig) -> ParsedGraphData:
+        """Delegate row parsing to the format-specific strategy.
+
+        Args:
+            csv_rows: Normalised CSV rows.
+            config: Validated load configuration.
+
+        Returns:
+            Intermediate ParsedGraphData ready for graph construction.
+        """
         strategy = self._strategies[config.format_name]
         return strategy.parse_rows(csv_rows)
 
     def build(self, parsed_graph: ParsedGraphData, config: CsvLoadConfig) -> Graph:
+        """Construct a Graph from parsed nodes and edges.
+
+        Args:
+            parsed_graph: Intermediate parsed data.
+            config: Validated load configuration.
+
+        Returns:
+            A fully populated Graph instance.
+        """
         graph = Graph(
             graph_id=config.graph_id,
             directed_default=True,
@@ -150,6 +203,15 @@ class DefaultCsvParsingPipeline(CsvParsingPipeline):
         return graph
 
     def validate(self, graph: Graph, config: CsvLoadConfig) -> None:
+        """Verify that the graph contains at least one node and one edge.
+
+        Args:
+            graph: The graph to validate.
+            config: Validated load configuration.
+
+        Raises:
+            CsvParsingError: If the graph has no nodes or no edges.
+        """
         if len(graph.nodes) == 0:
             raise CsvParsingError("Parsed graph contains no nodes.")
         if len(graph.edges) == 0:

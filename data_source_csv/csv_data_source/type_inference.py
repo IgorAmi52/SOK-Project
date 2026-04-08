@@ -11,6 +11,16 @@ _DATE_FORMATS = ("%Y-%m-%d", "%Y/%m/%d", "%d.%m.%Y")
 
 
 def infer_attribute_value(raw: str) -> AttributeValue:
+    """Infer a typed AttributeValue from a raw CSV cell string.
+
+    Attempts int, float, and date conversions in order; falls back to str.
+
+    Args:
+        raw: The raw cell text.
+
+    Returns:
+        The inferred int, float, date, or original string value.
+    """
     value = raw.strip()
     if value == "":
         return ""

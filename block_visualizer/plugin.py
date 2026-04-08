@@ -7,6 +7,8 @@ from .renderer import BlockGraphRenderer
 
 
 class BlockVisualizerPlugin(VisualizerPlugin):
+    """Visualizer plugin that renders a graph as an interactive HTML block diagram."""
+
     def __init__(self) -> None:
         self._renderer = BlockGraphRenderer()
 
@@ -19,4 +21,13 @@ class BlockVisualizerPlugin(VisualizerPlugin):
         return "Block Visualizer"
 
     def render(self, graph: Graph, selected_node_id: str | None = None) -> str:
+        """Render the graph to an HTML string.
+
+        Args:
+            graph: The graph to visualise.
+            selected_node_id: Optional node to highlight.
+
+        Returns:
+            An HTML string containing the block-diagram visualisation.
+        """
         return self._renderer.render(graph, selected_node_id)

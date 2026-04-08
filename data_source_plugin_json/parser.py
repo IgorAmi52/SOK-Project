@@ -24,6 +24,12 @@ class _PendingReference:
 
 
 class JsonGraphParser:
+    """Converts an in-memory JSON payload into a Graph model.
+
+    Handles nested objects, arrays, primitive values, and forward/backward
+    reference resolution via configurable id and reference fields.
+    """
+
     def __init__(
         self,
         id_field: str = "@id",
@@ -39,6 +45,19 @@ class JsonGraphParser:
         self._pending_references: list[_PendingReference] = []
 
     def parse(self, payload: Any, graph_id: str) -> Graph:
+        """Parse a JSON payload and build a Graph.
+
+        Args:
+            payload: Deserialized JSON value (dict, list, or primitive).
+            graph_id: Identifier assigned to the resulting graph.
+
+        Returns:
+            A fully constructed Graph with nodes, edges, and resolved references.
+
+        Raises:
+            JsonReferenceResolutionError: If any forward references cannot be
+                resolved after the full payload has been traversed.
+        """
         self._graph = Graph(graph_id=graph_id,
                             directed_default=True, allow_cycles=True)
         self._node_counter = 0

@@ -5,8 +5,15 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "simple-visualizer"
 version = "0.1.0"
-description = "Simple visualizer plugin for graph visualization platform"
+description = "Simple visualizer plugin: D3.js force-directed circle-and-line graph rendering"
 requires-python = ">=3.11"
+authors = [
+    { name = "Igor Amidžić" },
+    { name = "Nikola Stevanović" },
+    { name = "Miloš Jovanović" },
+    { name = "Miloš Damjanović" },
+    { name = "Zoran Repić" },
+]
 dependencies = [
     "graph-api",
     "jinja2>=3.0"

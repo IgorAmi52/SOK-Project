@@ -24,6 +24,12 @@ class _PendingReference:
 
 
 class YamlGraphParser:
+    """Converts an in-memory YAML payload into a Graph model.
+
+    Handles nested mappings, sequences, scalar values, and forward/backward
+    reference resolution via configurable id and reference fields.
+    """
+
     def __init__(
         self,
         id_field: str = "@id",
@@ -39,6 +45,19 @@ class YamlGraphParser:
         self._pending_references: list[_PendingReference] = []
 
     def parse(self, payload: Any, graph_id: str) -> Graph:
+        """Parse a YAML payload and build a Graph.
+
+        Args:
+            payload: Deserialized YAML value (dict, list, or scalar).
+            graph_id: Identifier assigned to the resulting graph.
+
+        Returns:
+            A fully constructed Graph with nodes, edges, and resolved references.
+
+        Raises:
+            YamlReferenceResolutionError: If any forward references cannot be
+                resolved after the full payload has been traversed.
+        """
         self._graph = Graph(graph_id=graph_id,
                             directed_default=True, allow_cycles=True)
         self._node_counter = 0

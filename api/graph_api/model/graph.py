@@ -9,6 +9,8 @@ from .node import Node
 
 @dataclass(slots=True)
 class Graph:
+    """Directed or undirected graph composed of nodes and edges."""
+
     graph_id: str
     directed_default: bool = True
     allow_cycles: bool = True
@@ -16,11 +18,28 @@ class Graph:
     edges: dict[str, Edge] = field(default_factory=dict)
 
     def add_node(self, node: Node) -> None:
+        """Add a node to the graph.
+
+        Args:
+            node: The node to add.
+
+        Raises:
+            GraphValidationError: If a node with the same id already exists.
+        """
         if node.node_id in self.nodes:
             raise GraphValidationError(f"Node '{node.node_id}' already exists.")
         self.nodes[node.node_id] = node
 
     def add_edge(self, edge: Edge) -> None:
+        """Add an edge to the graph.
+
+        Args:
+            edge: The edge to add.
+
+        Raises:
+            GraphValidationError: If the edge id is duplicate or endpoints are missing.
+            GraphConstraintError: If the edge would create a cycle in an acyclic graph.
+        """
         if edge.edge_id in self.edges:
             raise GraphValidationError(f"Edge '{edge.edge_id}' already exists.")
         if edge.source_id not in self.nodes or edge.target_id not in self.nodes:
@@ -32,6 +51,14 @@ class Graph:
         self.edges[edge.edge_id] = edge
 
     def remove_node(self, node_id: str) -> None:
+        """Remove a node from the graph.
+
+        Args:
+            node_id: Identifier of the node to remove.
+
+        Raises:
+            GraphConstraintError: If the node still has connected edges.
+        """
         connected = [
             edge.edge_id
             for edge in self.edges.values()
@@ -44,15 +71,39 @@ class Graph:
         self.nodes.pop(node_id, None)
 
     def remove_edge(self, edge_id: str) -> None:
+        """Remove an edge from the graph by its id.
+
+        Args:
+            edge_id: Identifier of the edge to remove.
+        """
         self.edges.pop(edge_id, None)
 
     def get_outgoing_edges(self, node_id: str) -> list[Edge]:
+        """Return all edges originating from the given node.
+
+        Args:
+            node_id: Source node identifier.
+        """
         return [edge for edge in self.edges.values() if edge.source_id == node_id]
 
     def get_incoming_edges(self, node_id: str) -> list[Edge]:
+        """Return all edges targeting the given node.
+
+        Args:
+            node_id: Target node identifier.
+        """
         return [edge for edge in self.edges.values() if edge.target_id == node_id]
 
     def create_subgraph(self, node_ids: set[str], subgraph_id: str) -> Graph:
+        """Create a new graph containing only the specified nodes and their interconnecting edges.
+
+        Args:
+            node_ids: Set of node identifiers to include.
+            subgraph_id: Identifier for the new subgraph.
+
+        Returns:
+            A new Graph instance with copied nodes and edges.
+        """
         subgraph = Graph(
             graph_id=subgraph_id,
             directed_default=self.directed_default,

@@ -5,8 +5,15 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "block-visualizer"
 version = "0.1.0"
-description = "Block visualizer plugin for graph visualization platform"
+description = "Block visualizer plugin: D3.js card-style graph rendering with attribute detail rows"
 requires-python = ">=3.11"
+authors = [
+    { name = "Igor Amidžić" },
+    { name = "Nikola Stevanović" },
+    { name = "Miloš Jovanović" },
+    { name = "Miloš Damjanović" },
+    { name = "Zoran Repić" },
+]
 dependencies = [
     "graph-api",
     "jinja2>=3.0"

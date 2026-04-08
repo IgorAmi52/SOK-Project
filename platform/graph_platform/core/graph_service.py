@@ -6,7 +6,19 @@ from graph_api.query.search import SearchQuery
 
 
 class GraphService:
+    """Stateless service that applies filter and search operations to graphs."""
+
     def filter_graph(self, graph: Graph, condition: FilterCondition, subgraph_id: str) -> Graph:
+        """Return a subgraph containing only nodes that satisfy the filter condition.
+
+        Args:
+            graph: The graph to filter.
+            condition: The filter condition to evaluate against each node.
+            subgraph_id: Identifier assigned to the resulting subgraph.
+
+        Returns:
+            A new Graph with matching nodes and their interconnecting edges.
+        """
         matching_node_ids: set[str] = set()
         for node in graph.nodes.values():
             attribute_value = node.attributes.get(condition.attribute_name)
@@ -19,6 +31,16 @@ class GraphService:
         return graph.create_subgraph(matching_node_ids, subgraph_id=subgraph_id)
 
     def search_graph(self, graph: Graph, query: SearchQuery, subgraph_id: str) -> Graph:
+        """Return a subgraph of nodes whose attribute names or values match the query.
+
+        Args:
+            graph: The graph to search.
+            query: The search query with the text to match.
+            subgraph_id: Identifier assigned to the resulting subgraph.
+
+        Returns:
+            A new Graph with matching nodes and their interconnecting edges.
+        """
         needle = query.normalized()
         matching_node_ids: set[str] = set()
         for node in graph.nodes.values():

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from importlib import metadata
 from typing import Callable, TypeVar, cast
 
@@ -7,11 +8,19 @@ from graph_api.contracts.data_source import DataSourcePlugin, PluginParameter
 from graph_api.contracts.visualizer import VisualizerPlugin
 from graph_platform.core.plugin_registry import PluginRegistry
 
+logger = logging.getLogger(__name__)
+
 DATA_SOURCE_ENTRY_POINT_GROUP = "graph_platform.data_source_plugins"
 VISUALIZER_ENTRY_POINT_GROUP = "graph_platform.visualizer_plugins"
 
 
+# Pattern: Abstract Factory — discovers and instantiates plugins via entry points and built-in fallbacks
 def create_plugin_registry() -> PluginRegistry:
+    """Create and populate a PluginRegistry with discovered and built-in plugins.
+
+    Returns:
+        A fully populated PluginRegistry instance.
+    """
     registry = PluginRegistry()
     _register_entry_point_data_sources(registry)
     _register_entry_point_visualizers(registry)
@@ -21,6 +30,14 @@ def create_plugin_registry() -> PluginRegistry:
 
 
 def describe_data_sources(registry: PluginRegistry) -> list[dict[str, object]]:
+    """Return serializable descriptions of all registered data-source plugins.
+
+    Args:
+        registry: The plugin registry to query.
+
+    Returns:
+        A list of dicts, each describing one data-source plugin and its parameters.
+    """
     return [
         {
             "id": plugin.plugin_id,
@@ -52,6 +69,14 @@ def describe_data_sources(registry: PluginRegistry) -> list[dict[str, object]]:
 
 
 def describe_visualizers(registry: PluginRegistry) -> list[dict[str, str]]:
+    """Return serializable descriptions of all registered visualizer plugins.
+
+    Args:
+        registry: The plugin registry to query.
+
+    Returns:
+        A list of dicts with ``id`` and ``name`` for each visualizer plugin.
+    """
     return [
         {"id": plugin.plugin_id, "name": plugin.display_name}
         for plugin in sorted(
@@ -102,6 +127,7 @@ def _register_entry_point_plugins(
             plugin = loaded() if callable(loaded) else loaded
             register(cast(PluginT, plugin))
         except Exception:
+            logger.debug("Failed to load entry-point '%s' from group '%s'", entry_point.name, group)
             continue
 
 

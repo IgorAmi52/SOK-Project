@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import date
+import os
 import sys
+from datetime import date
 from pathlib import Path
 from tempfile import gettempdir
 from typing import TYPE_CHECKING
@@ -738,4 +739,4 @@ def _persist_uploaded_source_file(uploaded_file) -> str:
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=os.environ.get("FLASK_DEBUG", "false").lower() in ("true", "1", "yes"))

@@ -8,6 +8,8 @@ from .pipeline import CsvParsingPipeline, DefaultCsvParsingPipeline
 
 
 class CsvDataSourcePlugin(DataSourcePlugin):
+    """Data-source plugin that loads a graph from a CSV file."""
+
     def __init__(self, pipeline: CsvParsingPipeline | None = None) -> None:
         self._pipeline = pipeline or DefaultCsvParsingPipeline()
 
@@ -46,6 +48,18 @@ class CsvDataSourcePlugin(DataSourcePlugin):
         ]
 
     def load_graph(self, parameter_values: dict[str, str]) -> Graph:
+        """Execute the CSV parsing pipeline and return the resulting graph.
+
+        Args:
+            parameter_values: Plugin parameters including ``file_path``,
+                ``format``, and optional ``delimiter`` and ``graph_id``.
+
+        Returns:
+            A Graph built from the CSV content.
+
+        Raises:
+            CsvParameterError: If parameter values are invalid.
+        """
         if not isinstance(parameter_values, dict):
             raise CsvParameterError("Parameter values must be provided as a dictionary.")
         return self._pipeline.execute(parameter_values)

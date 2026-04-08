@@ -24,11 +24,22 @@ def _node_title(node_id: str, attributes: dict[str, object]) -> str:
 
 
 class BlockGraphRenderer:
+    """Renders a Graph as an HTML block diagram using Jinja2 templates."""
+
     def __init__(self) -> None:
         templates_dir = Path(__file__).parent / "templates"
         self._env = Environment(loader=FileSystemLoader(templates_dir), autoescape=False)
 
     def render(self, graph: Graph, selected_node_id: str | None = None) -> str:
+        """Produce an HTML string for the given graph.
+
+        Args:
+            graph: The graph to render.
+            selected_node_id: Optional node to highlight in the output.
+
+        Returns:
+            A complete HTML document string.
+        """
         nodes_data: list[dict[str, object]] = []
         for node_id, node in graph.nodes.items():
             attributes = {

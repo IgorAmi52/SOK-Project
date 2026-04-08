@@ -7,11 +7,23 @@ from .query_parser import parse_filter_condition, parse_search_query
 from .workspace import Workspace
 
 
+# Pattern: Facade — provides a simplified interface for filter/search/reset operations on workspaces
 class WorkspaceService:
+    """Facade that orchestrates filter, search, and reset operations on a workspace."""
+
     def __init__(self, graph_service: GraphService | None = None) -> None:
         self._graph_service = graph_service or GraphService()
 
     def apply_filter(self, workspace: Workspace, filter_text: str) -> Graph:
+        """Parse and apply a filter expression to the workspace's current graph.
+
+        Args:
+            workspace: The workspace whose graph will be filtered.
+            filter_text: Raw filter expression (e.g. ``"age >= 30"``).
+
+        Returns:
+            The resulting filtered Graph, which also replaces the workspace's current graph.
+        """
         condition = parse_filter_condition(
             filter_text, workspace.current_graph)
         next_graph = self._graph_service.filter_graph(
@@ -24,6 +36,15 @@ class WorkspaceService:
         return next_graph
 
     def apply_search(self, workspace: Workspace, search_text: str) -> Graph:
+        """Parse and apply a text search to the workspace's current graph.
+
+        Args:
+            workspace: The workspace whose graph will be searched.
+            search_text: Free-text search string.
+
+        Returns:
+            The resulting subgraph of matching nodes.
+        """
         query = parse_search_query(search_text)
         next_graph = self._graph_service.search_graph(
             workspace.current_graph,
@@ -35,6 +56,14 @@ class WorkspaceService:
         return next_graph
 
     def reset_graph(self, workspace: Workspace) -> Graph:
+        """Reset the workspace's current graph to its original base graph.
+
+        Args:
+            workspace: The workspace to reset.
+
+        Returns:
+            A fresh copy of the base graph.
+        """
         workspace.current_graph = self._clone_graph(workspace.base_graph)
         workspace.applied_filters.clear()
         workspace.applied_searches.clear()

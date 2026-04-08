@@ -5,8 +5,15 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "graph-api"
 version = "0.1.0"
-description = "Shared graph domain model and plugin contracts"
+description = "Shared graph domain model and plugin contracts for the Graph Explorer platform"
 requires-python = ">=3.11"
+authors = [
+    { name = "Igor Amidžić" },
+    { name = "Nikola Stevanović" },
+    { name = "Miloš Jovanović" },
+    { name = "Miloš Damjanović" },
+    { name = "Zoran Repić" },
+]
 
 [tool.setuptools.packages.find]
 where = ["."]

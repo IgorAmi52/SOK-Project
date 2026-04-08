@@ -11,6 +11,8 @@ from .parser import JsonGraphParser
 
 
 class JsonDataSourcePlugin(DataSourcePlugin):
+    """Data-source plugin that loads a graph from a JSON file."""
+
     @property
     def plugin_id(self) -> str:
         return "json-data-source"
@@ -48,6 +50,19 @@ class JsonDataSourcePlugin(DataSourcePlugin):
         ]
 
     def load_graph(self, parameter_values: dict[str, str]) -> Graph:
+        """Parse a JSON file and return the resulting graph.
+
+        Args:
+            parameter_values: Plugin parameters including ``file_path``,
+                optional ``graph_id``, ``id_field``, and ``reference_fields``.
+
+        Returns:
+            A Graph built from the JSON content.
+
+        Raises:
+            JsonInputError: If the file is missing, unreadable, or contains
+                invalid JSON.
+        """
         file_path = parameter_values.get("file_path", "").strip()
         if not file_path:
             raise JsonInputError("Missing required parameter: file_path")

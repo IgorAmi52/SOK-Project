@@ -1,10 +1,10 @@
 class YamlDataSourceError(Exception):
-    pass
+    """Base exception for all YAML data-source errors."""
 
 
 class YamlInputError(YamlDataSourceError):
-    pass
+    """Raised when the YAML input file is missing, unreadable, or malformed."""
 
 
 class YamlReferenceResolutionError(YamlDataSourceError):
-    pass
+    """Raised when one or more YAML object references cannot be resolved."""

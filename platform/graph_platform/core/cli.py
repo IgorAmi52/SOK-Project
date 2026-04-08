@@ -17,20 +17,37 @@ from .workspace_service import WorkspaceService
 
 @dataclass(slots=True, frozen=True)
 class CliExecutionResult:
+    """Immutable result returned after executing a CLI command."""
+
     message: str
     operation: str | None = None
     query: str | None = None
 
 
 class CliCommandError(ValueError):
-    pass
+    """Raised when a CLI command is malformed or cannot be executed."""
 
 
+# Pattern: Command — parses text commands and dispatches graph mutations
 class CliCommandExecutor:
+    """Parses text commands and dispatches graph mutations on a workspace."""
+
     def __init__(self, workspace_service: WorkspaceService | None = None) -> None:
         self._workspace_service = workspace_service or WorkspaceService()
 
     def execute(self, workspace: Workspace, command_text: str) -> CliExecutionResult:
+        """Parse and execute a single CLI command against the given workspace.
+
+        Args:
+            workspace: The workspace on which to execute the command.
+            command_text: Raw command string (e.g. ``"create node --id n1"``).
+
+        Returns:
+            A CliExecutionResult describing the outcome.
+
+        Raises:
+            CliCommandError: If the command is invalid or execution fails.
+        """
         command = command_text.strip()
         if not command:
             raise CliCommandError("Command cannot be empty.")

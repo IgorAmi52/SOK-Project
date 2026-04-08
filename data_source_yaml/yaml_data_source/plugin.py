@@ -12,6 +12,8 @@ from .parser import YamlGraphParser
 
 
 class YamlDataSourcePlugin(DataSourcePlugin):
+    """Data-source plugin that loads a graph from a YAML file."""
+
     @property
     def plugin_id(self) -> str:
         return "yaml-data-source"
@@ -49,6 +51,19 @@ class YamlDataSourcePlugin(DataSourcePlugin):
         ]
 
     def load_graph(self, parameter_values: dict[str, str]) -> Graph:
+        """Parse a YAML file and return the resulting graph.
+
+        Args:
+            parameter_values: Plugin parameters including ``file_path``,
+                optional ``graph_id``, ``id_field``, and ``reference_fields``.
+
+        Returns:
+            A Graph built from the YAML content.
+
+        Raises:
+            YamlInputError: If the file is missing, unreadable, or contains
+                invalid YAML.
+        """
         file_path = parameter_values.get("file_path", "").strip()
         if not file_path:
             raise YamlInputError("Missing required parameter: file_path")

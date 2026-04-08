@@ -5,8 +5,15 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "data-source-csv"
 version = "0.1.0"
-description = "CSV data source plugin for graph visualization platform"
+description = "CSV data-source plugin: edge-list, adjacency-list, and adjacency-matrix formats with type inference"
 requires-python = ">=3.11"
+authors = [
+    { name = "Igor Amidžić" },
+    { name = "Nikola Stevanović" },
+    { name = "Miloš Jovanović" },
+    { name = "Miloš Damjanović" },
+    { name = "Zoran Repić" },
+]
 dependencies = [
     "graph-api"
 ]

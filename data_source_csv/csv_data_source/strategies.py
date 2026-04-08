@@ -9,7 +9,10 @@ from .models import CsvRows, ParsedEdge, ParsedGraphData
 from .type_inference import infer_attribute_value
 
 
+# Pattern: Strategy — each CSV format variant encapsulates its own row-parsing logic
 class CsvFormatStrategy(ABC):
+    """Abstract strategy that converts normalised CSV rows into parsed graph data."""
+
     @property
     @abstractmethod
     def format_name(self) -> str:
@@ -21,6 +24,8 @@ class CsvFormatStrategy(ABC):
 
 
 class EdgeListCsvStrategy(CsvFormatStrategy):
+    """Strategy for the edge-list CSV format (``source``, ``target`` columns)."""
+
     _REQUIRED_COLUMNS = ("source", "target")
     _TRUTHY = {"1", "true", "yes", "y", "t"}
     _FALSY = {"0", "false", "no", "n", "f"}
@@ -108,6 +113,8 @@ class EdgeListCsvStrategy(CsvFormatStrategy):
 
 
 class AdjacencyListCsvStrategy(CsvFormatStrategy):
+    """Strategy for the adjacency-list CSV format (``source``, pipe-delimited ``targets``)."""
+
     _REQUIRED_COLUMNS = ("source", "targets")
     _TRUTHY = {"1", "true", "yes", "y", "t"}
     _FALSY = {"0", "false", "no", "n", "f"}
@@ -208,6 +215,8 @@ class AdjacencyListCsvStrategy(CsvFormatStrategy):
 
 
 class MatrixCsvStrategy(CsvFormatStrategy):
+    """Strategy for the adjacency-matrix CSV format (source rows x target columns)."""
+
     _REQUIRED_ROW_COLUMN = "source"
     _NO_EDGE_LITERALS = {"false", "no", "n", "f"}
     _TRUTHY_EDGE_LITERALS = {"1", "true", "yes", "y", "t"}

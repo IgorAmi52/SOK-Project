@@ -8,6 +8,8 @@ from graph_api.model.attribute import AttributeValue
 
 
 class Comparator(str, Enum):
+    """Enumeration of relational comparison operators."""
+
     EQ = "=="
     GT = ">"
     GTE = ">="
@@ -16,6 +18,18 @@ class Comparator(str, Enum):
     NE = "!="
 
     def evaluate(self, left: AttributeValue, right: AttributeValue) -> bool:
+        """Evaluate the comparison between two attribute values.
+
+        Args:
+            left: Left-hand operand.
+            right: Right-hand operand.
+
+        Returns:
+            True if the comparison holds, False otherwise.
+
+        Raises:
+            TypeError: If the operands have different types.
+        """
         if type(left) is not type(right):
             raise TypeError(
                 f"Cannot compare values of different types: {type(left).__name__} and {type(right).__name__}."
@@ -41,6 +55,8 @@ class Comparator(str, Enum):
 
 @dataclass(slots=True, frozen=True)
 class FilterCondition:
+    """A single filter criterion: attribute, comparator, and reference value."""
+
     attribute_name: str
     comparator: Comparator
     value: AttributeValue

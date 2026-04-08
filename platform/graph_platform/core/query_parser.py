@@ -21,6 +21,17 @@ _COMPARATORS_IN_PARSE_ORDER = [
 
 
 def parse_search_query(text: str) -> SearchQuery:
+    """Parse raw text into a SearchQuery.
+
+    Args:
+        text: The raw search string.
+
+    Returns:
+        A validated SearchQuery instance.
+
+    Raises:
+        QueryValidationError: If the text is empty.
+    """
     normalized = text.strip()
     if not normalized:
         raise QueryValidationError("Search query cannot be empty.")
@@ -28,6 +39,18 @@ def parse_search_query(text: str) -> SearchQuery:
 
 
 def parse_filter_condition(text: str, graph: Graph) -> FilterCondition:
+    """Parse a filter expression into a FilterCondition, coercing value types from the graph.
+
+    Args:
+        text: Raw filter expression (e.g. ``"age >= 30"``).
+        graph: The graph used to infer the attribute's value type.
+
+    Returns:
+        A FilterCondition ready for evaluation.
+
+    Raises:
+        QueryValidationError: If the expression is malformed or the value cannot be coerced.
+    """
     attribute_name, comparator, raw_value = _split_filter_parts(text)
     value = _coerce_filter_value(attribute_name, raw_value, graph)
 
