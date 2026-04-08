@@ -12,18 +12,18 @@ The system is organized into four layers connected through well-defined contract
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                   Web Frontend (Django / Flask)           │
-│              D3.js force-directed & block views           │
+│                   Web Frontend (Django / Flask)          │
+│              D3.js force-directed & block views          │
 ├──────────────────────────────────────────────────────────┤
 │                     Platform Core                        │
 │   PluginRegistry · WorkspaceService · CLI · GraphService │
-├────────────────────────┬─────────────────────────────────┤
-│   Data Source Plugins  │       Visualizer Plugins        │
-│  ┌───────┐ ┌────┐ ┌──────┐  ┌────────┐ ┌─────────┐     │
-│  │ JSON  │ │CSV │ │ YAML │  │ Simple │ │  Block  │     │
-│  └───┬───┘ └──┬─┘ └──┬───┘  └───┬────┘ └────┬────┘     │
-├──────┴────────┴──────┴───────────┴───────────┴──────────┤
-│                  graph-api (Contracts + Model)            │
+├────────────────────────────┬─────────────────────────────┤
+│   Data Source Plugins      │   Visualizer Plugins        │
+│  ┌───────┐ ┌────┐ ┌──────┐   ┌────────┐ ┌─────────┐      │
+│  │ JSON  │ │CSV │ │ YAML │   │ Simple │ │  Block  │      │
+│  └───┬───┘ └──┬─┘ └──┬───┘   └───┬────┘ └────┬────┘      │
+├──────┴────────┴──────┴───────────┴───────────┴───────────┤
+│                  graph-api (Contracts + Model)           │
 │     DataSourcePlugin · VisualizerPlugin · Graph · Node   │
 └──────────────────────────────────────────────────────────┘
 ```
